@@ -4,7 +4,7 @@ use NetSNMP::OID;
 use Carp;
 use strict;
 use warnings;
-use Clone;
+#use Clone;
 use Data::Dumper;
 
 
@@ -65,9 +65,9 @@ The following operators are overloaded:
 Two SNMP::Class::OID objects can be compared using the == operator. The result is what everybody expects.
 
 
-=item * '+' 
+=item * '.' 
 
-Two SNMP::Class::OID objects can be concatenated using the + operator. Note that order actually is important. Example: .1.3.6 + .1.4.1 will yield .1.3.6.1.4.1.
+Two SNMP::Class::OID objects can be concatenated using the . operator. Note that order actually is important. Example: .1.3.6 . .1.4.1 will yield .1.3.6.1.4.1.
 
 
 =item * @{} 

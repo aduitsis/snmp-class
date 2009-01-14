@@ -11,8 +11,8 @@ BEGIN {
 	use_ok("SNMP::Class");
 }
 
-my $s = SNMP::Class->new({ DestHost => 'localhost' });
-$s->deactivate_bulkwalks;
+#my $s = SNMP::Class->new({ DestHost => 'localhost' });
+#$s->deactivate_bulkwalks;
 
 
 ###my $ifTable = $s->walk("ifTable");
@@ -21,16 +21,15 @@ $s->deactivate_bulkwalks;
 #print $ifTable->value("en0")->dump;
 #print $ifTable->find("ifDescr"=>"en0")->ifSpeed;
 
-my $ipf = $s->walk("ipForwarding")->value;
+#my $ipf = $s->walk("ipForwarding")->value;
 
-unless ($ipf->is_forwarding) {
-	print STDERR "NOT forwarding\n\n";
-}
-
-
+#unless ($ipf->is_forwarding) {
+#	print STDERR "NOT forwarding\n\n";
+#}
 
 
-exit;
+
+
 
 
 my $oid = NetSNMP::OID->new(".1.2.3.4.5");
@@ -106,11 +105,11 @@ ok($oid19->get_instance_oid == ".0","get_instance_oid on ifDescr.14");
 #.3.102.111.111
 #
 
-my $v1 = SNMP::Class::Varbind->new(oid=>$oid9);
-my $v2 = SNMP::Class::Varbind->new(oid=>".1.2.3.4.5.1.2.3");
+my $v1 = SNMP::Class::Varbind->new(oid=>$oid9,type=>'INTEGER');
+my $v2 = SNMP::Class::Varbind->new(oid=>".1.2.3.4.5.1.2.3",type=>'INTEGER');
 my $v3 = SNMP::Class::Varbind->new(oid=>$oid15,raw_value=>"ethernet0",type=>"OCTET_STRING");
-my $v5 = SNMP::Class::Varbind->new(oid=>"ipAdEntAddr.1.2.3.4",value=>"192.168.1.1");
-my $v6 = SNMP::Class::Varbind->new(oid=>"sysUpTime.0", raw_value=>"1111");
+my $v5 = SNMP::Class::Varbind->new(oid=>"ipAdEntAddr.1.2.3.4",value=>"192.168.1.1",type=>'IPADDR');
+my $v6 = SNMP::Class::Varbind->new(oid=>"sysUpTime.0", raw_value=>"1111", type=>'TIMETICKS');
 isa_ok($v1,"SNMP::Class::Varbind");
 isa_ok($v2,"SNMP::Class::Varbind");
 isa_ok($v3,"SNMP::Class::Varbind");

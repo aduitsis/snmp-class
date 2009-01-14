@@ -18,6 +18,7 @@ INIT {
 	DEBUG "Handler for IpAddress registered";
 }
 
+package SNMP::Class::Value::IpAddress;
 
 
 1;

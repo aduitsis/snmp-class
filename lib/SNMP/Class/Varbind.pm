@@ -58,6 +58,12 @@ sub new {
 	}
 	else {
 		croak "Cannot create a new varbind without an oid" unless defined($arg_h{oid});
+
+		#check * check * check
+		#We **must** have a valid type
+		#otherwise, something is seriously wrong because no varbind can exist without a type
+		#so, just bail if the type is not set
+		croak "Error: Attempted creation of varbind without type (arguments where: @_)" unless defined($arg_h{type});
 		
 		if (eval { $arg_h{oid}->isa("SNMP::Class::OID") }) {
 			#we just keep it intact and continue
@@ -73,6 +79,7 @@ sub new {
 			}
 		}
 	}
+
 	
 	#default fallback: value coincides with raw_value
 	#this may be freely modified later
@@ -81,7 +88,11 @@ sub new {
 	}
 	
 	#we now have an almost complete object. Let's see if there is any more functionality inside a callback
-	if(defined($self->{raw_value})&&$self->has_label&&defined($callback{label}->{$self->get_label})) {
+	#If we can find some special sort of functionality available, we will return an enhanced object
+	#instead of a simple SNMP::Class::Varbind
+
+	#case 1: Object has handler for the specific callback (example: ipForwarding) (example2: sysUpTime)
+	if($self->has_label && defined($callback{label}->{$self->get_label})) {
 		DEBUG "There is a special callback for label ".$self->get_label;
 		bless $self,$callback{label}->{$self->get_label};
 		if($self->can("initialize_callback_object")) {
@@ -90,7 +101,8 @@ sub new {
 		}
 
 	}
-	elsif(defined($self->{raw_value})&&$self->has_syntax&&defined($callback{syntax}->{$self->get_syntax})) {
+	#case 2: Object has handler for its syntax. (example: IpAddress) 
+	elsif($self->has_syntax && defined($callback{syntax}->{$self->get_syntax})) {
 		DEBUG "There is a special callback for syntax ".$self->get_syntax;
 		bless $self,$callback{syntax}->{$self->get_syntax};
 		if($self->can("initialize_callback_object")) {
@@ -98,6 +110,7 @@ sub new {
 			$self->initialize_callback_object;
 		}
 	}
+	#case 3: Nothing special about this object, just return an SNMP::Class::Varbind
 	else {
 		bless $self,$class;
 	}
