@@ -112,6 +112,10 @@ sub new {
 #		unshift @arr,($1);
 #	}
 #	print STDERR "Array is ",Dumper(@arr),"\n";
+
+	#test code for the future
+	#my $oid = SNMP::Class::Utils::oid_of($oid_str);
+	#print STDERR "$oid_str is translated to $oid\n";
 	
 	my $self = {};
 	$self->{oid} = NetSNMP::OID->new($oid_str) or confess "Cannot create a new NetSNMP::OID object for $oid_str";
@@ -441,7 +445,7 @@ sub new_from_string {
 
 #utility function, not to be used by the user
 sub convert_to_oid_object {
-	my $arg = shift(@_);
+	defined( my $arg = shift(@_) ) or confess "undefined argument";
 	if ( ! eval { $arg->isa(__PACKAGE__) } ) {
 			return __PACKAGE__->new($arg);
 	}	

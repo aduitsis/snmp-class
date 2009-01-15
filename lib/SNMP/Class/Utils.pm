@@ -27,9 +27,8 @@ sub str2arr {
 #2)The attribute of that oid we are interested in
 #example: get_attr('sysName','objectID')
 sub get_attr {
-	my $oid_name = shift(@_);
-	croak unless defined($oid_name);
-	my $attr = shift(@_) or croak "Incorrect call to get_attr";
+	defined(my $oid_name = shift(@_)) or croak "undefined oid_name";
+	defined(my $attr = shift(@_)) or croak "undefined attr";
 	if(!defined($SNMP::MIB{$oid_name})) {
 		$logger->debug("There is no such object: $oid_name");
 		return;
@@ -85,8 +84,7 @@ sub parent_of {
 }
 
 sub oid_of {
-	my $oid_name = shift(@_);
-	croak unless defined($oid_name);
+	defined( my $oid_name = shift(@_) ) or croak "undefined oid_name";
 	return get_attr($oid_name,'objectID');
 }
 
