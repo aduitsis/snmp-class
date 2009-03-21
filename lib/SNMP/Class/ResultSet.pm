@@ -225,6 +225,7 @@ sub match_label {
 sub match_instance {
 	my($x,$y) = @_;
 	return unless defined($x->get_label_oid);
+	#this may need some changes later
 	return unless defined($y->get_label_oid);
 	return $x->get_instance_oid->oid_is_equal( $y->get_instance_oid );
 }
