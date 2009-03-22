@@ -1,4 +1,4 @@
-#!/sw/bin/perl -w
+#!/usr/bin/perl -w
 
 use warnings;
 use strict;
@@ -27,22 +27,35 @@ BEGIN {
 #	print STDERR "NOT forwarding\n\n";
 #}
 
+my $oid221 = SNMP::Class::OID->new([1,2,3,4]);
+isa_ok($oid221,'SNMP::Class::OID');
+ok($oid221->length == 4,"length method");
+ok($oid221->numeric eq '.1.2.3.4',"numeric method");
+ok($oid221->to_string eq 'iso.2.3.4',"to_string method");
 
 
+my $oid223 = SNMP::Class::OID->new("ifName");
+isa_ok($oid223,'SNMP::Class::OID');
 
-
-
-my $oid = NetSNMP::OID->new(".1.2.3.4.5");
-
-my $oid10 = SNMP::Class::OID->new($oid);
+my $oid222 = SNMP::Class::OID->new("ifName.5");
+isa_ok($oid222,'SNMP::Class::OID');
 
 my $oid2 = SNMP::Class::OID->new(".1.2.3.4.5");
+isa_ok($oid2,'SNMP::Class::OID');
+
+my $oid = NetSNMP::OID->new(".1.2.3.4.5");
+isa_ok($oid,'NetSNMP::OID');
+
+my $oid10 = SNMP::Class::OID->new($oid);
+isa_ok($oid10,'SNMP::Class::OID');
+
 
 my $oid4 = SNMP::Class::OID->new(".1.2.3.4.5.6");
 
 
 my $oid_z = SNMP::Class::OID->new("0");
 my $oid_dotz = SNMP::Class::OID->new(".0");
+
 
 my $oid3 = SNMP::Class::OID->new_from_string("foo");
 
@@ -73,9 +86,9 @@ ok($oid2->contains($oid4),"Hierarchy checking");
 ok($oid2->contains(".1.2.3.4.5.6"),"Hierarchy checking with string argument");
 ok($oid3 == SNMP::Class::OID->new(".3.102.111.111"),"String conversion test");
 ok($oid2->[0] eq 1,"array reference overloading subscript");
-ok($oid_z->to_array eq 0,"zero oid numeric representation"); 
+is_deeply($oid_z->to_array,(0),"zero oid numeric representation"); 
 ok($oid_z->numeric eq '.0',"zero oid string representation"); 
-ok($oid_dotz->to_array eq (0),"zero oid numeric representation"); 
+is_deeply($oid_dotz->to_array,(0),"zero oid numeric representation"); 
 ok($oid_dotz->numeric eq '.0',"zero oid string representation"); 
 ok($oid2->numeric eq ".1.2.3.4.5" ,"oid numeric method");
 ok($oid2->slice(1,2,3,4) == SNMP::Class::OID->new(".1.2.3.4"),"oid slicing explicit");
@@ -101,7 +114,7 @@ my $oid19 = SNMP::Class::OID->new("sysName.0");
 ok($oid19->get_label_oid == "sysName","get_label_oid on ifDescr.14");
 ok($oid19->get_instance_oid == ".0","get_instance_oid on ifDescr.14");
 
-
+exit;
 #.3.102.111.111
 #
 

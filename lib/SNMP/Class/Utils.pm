@@ -27,13 +27,16 @@ sub str2arr {
 #2)The attribute of that oid we are interested in
 #example: get_attr('sysName','objectID')
 sub get_attr {
-	defined(my $oid_name = shift(@_)) or croak "undefined oid_name";
-	defined(my $attr = shift(@_)) or croak "undefined attr";
+	defined(my $oid_name = shift(@_)) or confess "undefined oid_name";
+	defined(my $attr = shift(@_)) or confess "undefined attr";
 	if(!defined($SNMP::MIB{$oid_name})) {
-		$logger->debug("There is no such object: $oid_name");
+		DEBUG "There is no such object: $oid_name";
 		return;
 	}
-	return $SNMP::MIB{$oid_name}->{$attr};
+	my $ret = $SNMP::MIB{$oid_name}->{$attr};
+	return unless defined $ret;
+	return if $ret eq '';
+	return $ret;
 }
 
 
@@ -49,8 +52,7 @@ sub textual_convention_of {
 }
 
 sub syntax_of {
-	my $oid_name = shift(@_) or croak "Incorrect call to textual_convention_of";
-	return get_attr($oid_name,'syntax');
+	return get_attr(shift,'syntax');
 }
 
 sub enums_of {
@@ -118,6 +120,23 @@ sub is_valid_oid {
                 $logger->debug("$str doesn't seem like a valid OID. Returning undef...");
                 return;
         }
+}
+
+sub convert_to_netsnmp_oid {
+	defined ( my $str = shift ) or confess "Missing parameter";
+	if(my $obj = NetSNMP::OID->new($str)) {
+		return $obj;
+	}
+	return;
+}
+
+sub convert_str_to_array {
+	defined ( my $str = shift ) or confess "missing argument";
+	$str = (substr($str,0,1) eq '.')? substr($str,1) : $str;
+	my @arr = ( split('\.',$str) );
+	confess "Empty oid" unless @arr;
+	###DEBUG "$str converts to ".join(',',@arr);
+	return @arr;
 }
 
 	

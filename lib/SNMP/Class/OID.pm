@@ -1,11 +1,75 @@
 package SNMP::Class::OID;
 
-use NetSNMP::OID;
-use Carp;
 use strict;
 use warnings;
-#use Clone;
+use Carp;
 use Data::Dumper;
+use Moose;
+use Moose::Util::TypeConstraints;
+use Scalar::Util qw(looks_like_number);
+use Log::Log4perl qw(:easy);
+my $logger = get_logger();
+
+#we test to see whether we can load NetSNMP::OID
+my $has_netsnmp;
+eval { 
+	require NetSNMP::OID; 
+	NetSNMP::OID->import();
+};
+$has_netsnmp = ($@)? 0 : 1;
+	
+
+subtype 'ArrayRefOfInts' => as 'ArrayRef[Int]';
+
+type 'NetSNMP::OID' => where { eval { $_->isa('NetSNMP::OID') } };
+
+coerce 'ArrayRefOfInts' 
+	=> from 'NetSNMP::OID'
+		=> via {
+			my @arr = $_->to_array;
+			return \@arr;
+		}
+	=> from 'Str'
+		=> via {
+			my @newarr;
+			my @arr = SNMP::Class::Utils::convert_str_to_array($_);
+			while(defined(my $item = pop(@arr))) {
+				###DEBUG "item is $item";
+				if(looks_like_number($item)) {	
+					unshift @newarr,($item);
+				}
+				else {
+					defined(my $obj_id = SNMP::Class::Utils::oid_of($item)) or confess "Cannot understand $item in $_";
+					unshift @newarr,(SNMP::Class::Utils::convert_str_to_array($obj_id));
+					last; #if we encountered a label, we must not continue up
+				}
+			}
+			###DEBUG "$_ converts to ".join(',',@newarr);
+			return \@newarr; 
+		}
+	=> from __PACKAGE__
+		=> via {
+			return $_->to_arrayref
+		}
+;
+			
+	
+ 
+
+has 'oid' => (
+	is => 'ro', #object is immutable
+	isa => 'ArrayRefOfInts', #an OID type is stored inside
+	reader => 'get_oid', #accessor, but I'm not sure it is too useful
+	coerce => 1, #if passed a NetSNMP::OID we will convert it
+	required => 1, #this attribute must be supplied
+	
+);
+
+
+sub BUILDARGS {
+	defined( my $class = shift ) or confess "missing class argument";
+	return { oid => shift }
+}
 
 
 =head1 NAME
@@ -14,7 +78,7 @@ SNMP::Class::OID - Represents an SNMP Object-ID.
 
 =cut
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 =head1 SYNOPSIS
 
@@ -95,42 +159,6 @@ use overload
 
 new can be used to construct a new object-id. Takes one string as an argument, like ".1.3.6.4.1". Returns an SNMP::Class::OID object, or confesses if that is not possible. If the 1rst argument is a L<NetSNMP::OID> instead of a string, the constructor will notice and take appropriate action to return a valid object.
 
-=cut
- 
-sub new {
-	my $class = shift(@_) or croak "Incorrect call to new";
-	my $oid_str = shift(@_);
-	if ( eval { $oid_str->isa("NetSNMP::OID") } ) {
-		return bless { oid => $oid_str }, $class; #it was not a str after all :)
-	}
-	if($oid_str eq "0") {
-		$oid_str = ".0";
-	}
-#	my @arr;
-#	my $num_str = SNMP::Class::Utils::oid_of($oid_str);
-#	while( $num_str =~ /(\d+)/g ){
-#		unshift @arr,($1);
-#	}
-#	print STDERR "Array is ",Dumper(@arr),"\n";
-
-	#test code for the future
-	#my $oid = SNMP::Class::Utils::oid_of($oid_str);
-	#print STDERR "$oid_str is translated to $oid\n";
-	
-	my $self = {};
-	$self->{oid} = NetSNMP::OID->new($oid_str) or confess "Cannot create a new NetSNMP::OID object for $oid_str";
-		
-	return bless $self,$class;
-}
-
-#this constructor must DIE. Soon.
-#sub new_from_netsnmpoid {
-#	my $class = shift(@_) or croak "Incorrect call to new_from_netsnmpoid";
-#	my $self = {};
-#	$self->{oid} = shift(@_) or croak "Missing argument from new_from_netsnmpoid";
-#	return bless $self,$class;
-#}
-
 =head2 get_syntax 
 
 Returns, if it exists, the SNMP SYNTAX clause for the oid or undef if it doesn't. 
@@ -138,8 +166,7 @@ Returns, if it exists, the SNMP SYNTAX clause for the oid or undef if it doesn't
 =cut
 
 sub get_syntax {
-	my $self = shift(@_);
-	return SNMP::Class::Utils::syntax_of($self->numeric);
+	return SNMP::Class::Utils::syntax_of($_[0]->numeric);
 }
 
 =head2 has_syntax 
@@ -235,7 +262,7 @@ sub slice {
 	my $start = shift(@_);
 	my $end = pop(@_) || $start;
 	if($end<$start) {
-		croak "Cannot have the end $end smaller that the $start in the range you requested";
+		confess "Cannot have the end $end smaller that the $start in the range you requested";
 	}
 	$start-=1;
 	$end-=1;
@@ -244,9 +271,8 @@ sub slice {
 	
 
 sub oid {
-	my $self = shift(@_);
-	croak "self appears to be undefined" unless ref $self;	
-	return $self->{oid};
+	confess "Sorry, NetSNMP::OID cannot be loaded...maybe NetSNMP not installed?" unless $has_netsnmp;
+	return NetSNMP::OID->new($_[0]->numeric);
 }
 
 =head2 to_array
@@ -256,14 +282,11 @@ Returns an array representation of the object OID.
 =cut
 
 sub to_array {
-	my $self = shift(@_);
-	croak "self appears to be undefined" unless ref $self;
-	return $self->oid->to_array;
+	return @{ $_[0]->get_oid };
 }
 
 sub to_arrayref {
-	my $self = shift(@_);
-	croak "self appears to be undefined" unless ref $self;
+	defined( my $self = shift ) or confess "incorrect call";
 	my @array = $self->to_array;
 	return \@array;
 }
@@ -275,10 +298,9 @@ Returns the length (in items) of the object OID.
 =cut
 
 sub length {
-	my $self = shift(@_);
-	croak "self appears to be undefined" unless ref $self;
-	return $self->oid->length;
+	return scalar $_[0]->to_array;
 }
+
 
 =head2 is_null 
 
@@ -289,9 +311,7 @@ Let's just hope that we won't encounter 0.0 instances any time soon.
 =cut
 
 sub is_null {
-	my $self = shift(@_);
-	croak "self appears to be undefined" unless ref $self;
-	return 1 if ($self->numeric eq ".0.0");#this should be fairly fast
+	return 1 if ($_[0]->numeric eq ".0.0");#this should be fairly fast
 	return;
 }
 	
@@ -303,9 +323,7 @@ Returns a numeric representation of the object.
 =cut
 
 sub numeric {
-        my $self = shift(@_);
-		croak "self appears to be undefined" unless ref $self;
-        return '.'.join('.',$self->to_array);
+        return '.'.join('.',$_[0]->to_array);
 }
 
 =head2 to_string
@@ -315,9 +333,10 @@ Returns a string representation of the object. Difference with numeric is that n
 =cut
 
 sub to_string {
-	my $self = shift(@_);
-	croak "self appears to be undefined" unless ref $self;
-	return $self->oid->quote_oid;
+	defined( my $self = shift ) or confess "incorrect call";
+	return $self->get_label.$self->get_instance_oid->numeric if($self->has_label&&$self->has_instance);
+	return $self->numeric;#fallback 
+	
 }
 
 =head2 add
@@ -328,16 +347,15 @@ Concatenates two OIDs. Use it through the . overloaded operator. Second argument
 
 
 sub add {
-	my $self = shift(@_);
-	croak "self appears to be undefined" unless ref $self;
-	my $other = convert_to_oid_object(shift(@_)) or croak "Second argument missing from add";
-	my $reverse = shift(@_); 
-	if(defined($reverse)&&$reverse) {
+	defined( my $self = shift ) or confess "incorrect call";
+	my $other = __PACKAGE__->new(shift);
+	my $reverse = shift; 
+	if( defined($reverse) && $reverse ) {
 		($self,$other) = ($other,$self);
 	}
-	return __PACKAGE__->new($self->numeric) if ($other->is_null);#poor man's clone....
-	return __PACKAGE__->new($other->numeric) if ($self->is_null);
-	return __PACKAGE__->new($self->oid->add($other->oid));
+	return __PACKAGE__->new($self->get_oid) if ($other->is_null);
+	return __PACKAGE__->new($other->get_oid) if ($self->is_null);
+	return __PACKAGE__->new([$self->to_array,$other->to_array]);
 }
 
 =head2 oid_compare
@@ -347,11 +365,9 @@ Compares two OIDs. Has the same semantic with the spaceship <=> operator. Second
 =cut
 
 sub oid_compare {
-	#print Dumper(@_);
-	my $self = shift(@_);
-	croak "self appears to be undefined" unless ref $self;
-	my $other = convert_to_oid_object(shift(@_));	
-	croak "Internal error: Second argument missing from compare. Second argument was ".Dumper($other)."\n" unless(ref $other);
+	defined( my $self = shift ) or confess "incorrect call";
+	my $other = __PACKAGE__->new(shift);	
+	confess "Internal error: Second argument missing from compare. Second argument was ".Dumper($other)."\n" unless(ref $other);
 	my @arr1 = $self->to_array;
 	my @arr2 = $other->to_array;
 
@@ -401,11 +417,10 @@ Can ascertain if an oid is a subset of the oid represented by the object. Takes 
 =cut
  
 sub contains {
-	my $self = shift(@_);
-	croak "self appears to be undefined" unless ref $self;
-	my $other_oid = convert_to_oid_object(shift(@_));
-	croak "Second argument missing from contains" unless (ref $other_oid);
-	if ($self->length > $other_oid->length) { return }
+	defined( my $self = shift ) or confess "incorrect call";
+	my $other_oid = __PACKAGE__->new(shift);
+	confess "Second argument missing from contains" unless (ref $other_oid);
+	return if ($self->length > $other_oid->length);
 	my @arr1 = $self->to_array;
 	my @arr2 = $other_oid->to_array;
 	for(my $i=0;$i<=$#arr1;$i++) {
@@ -429,32 +444,15 @@ Can create an oid from a literal string. Useful to generate instances which corr
 =cut  
 
 sub new_from_string {
-	my $class = shift(@_) or confess "Incorrect call to new";
-	my $str = shift(@_) or confess "Missing string as 1st argument";
-	my $implied = shift(@_) || 0;
+	defined( my $class = shift ) or confess "Incorrect call to new";
+	defined( my $str = shift ) or confess "Missing string as 1st argument";
+	my $implied = shift || 0;
 	my $newstr;
 	if(!$implied) { $newstr = "." . CORE::length($str) }
 	map { $newstr .= ".$_" } unpack("c*",$str);
-	###print $newstr,"\n";
-	my $self={};
-	#$self->{oid} = NetSNMP::OID->new($newstr) or croak "Cannot invoke NetSNMP::OID::new method \n";
-	#return bless $self,$class;
-	return __PACKAGE__->new($newstr);
+	return $class->new($newstr);
 }
 
-
-#utility function, not to be used by the user
-sub convert_to_oid_object {
-	defined( my $arg = shift(@_) ) or confess "undefined argument";
-	if ( ! eval { $arg->isa(__PACKAGE__) } ) {
-			return __PACKAGE__->new($arg);
-	}	
-	else {#indeed a __PACKAGE__
-		####print "returning ".Dumper($arg);
-		return $arg;
-	}
-}
-	
 
 =head1 AUTHOR
 
@@ -508,5 +506,9 @@ This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
 =cut
+
+ no Moose;
+
+__PACKAGE__->meta->make_immutable;
 
 1; # End of SNMP::Class::OID
