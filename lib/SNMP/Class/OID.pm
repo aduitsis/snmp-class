@@ -1,7 +1,5 @@
 package SNMP::Class::OID;
 
-use strict;
-use warnings;
 use Carp;
 use Data::Dumper;
 use Moose;
