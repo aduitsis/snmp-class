@@ -6,6 +6,7 @@ use Data::Dumper;
 use Log::Log4perl qw(:easy);
 
 
+
 has 'absolute_time' => (
 	is => 'ro',
 	isa => 'Str',
