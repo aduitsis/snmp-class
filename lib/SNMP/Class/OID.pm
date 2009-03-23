@@ -66,7 +66,12 @@ has 'oid' => (
 
 sub BUILDARGS {
 	defined( my $class = shift ) or confess "missing class argument";
-	return { oid => shift }
+	if( @_ == 1 ) { #if we got only one argument, it must be the oid 
+		return { oid => shift };
+	} 
+	else {
+		return $class->SUPER::BUILDARGS(@_);
+	}	
 }
 
 
@@ -76,7 +81,7 @@ SNMP::Class::OID - Represents an SNMP Object-ID.
 
 =cut
 
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 
 =head1 SYNOPSIS
 

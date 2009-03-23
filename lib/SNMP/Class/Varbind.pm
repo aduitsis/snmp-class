@@ -1,18 +1,35 @@
 package SNMP::Class::Varbind;
 
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 
-use warnings;
-use strict;
+use Moose;
+use Moose::Util::TypeConstraints;
+
 use SNMP;
-use Carp qw(cluck carp croak confess);
+use Carp;
 use SNMP::Class::OID;
 use Data::Dumper;
 use Log::Log4perl qw(:easy);
-
-use SNMP::Class::Varbind::IpAddress;
+#@use SNMP::Class::Varbind::IpAddress;
 use SNMP::Class::Varbind::SysUpTime;
-use SNMP::Class::Varbind::IpForwarding;
+#@use SNMP::Class::Varbind::IpForwarding;
+
+extends 'SNMP::Class::OID';
+
+has 'raw_value' => (
+	is => 'ro', #object is immutable
+	isa => 'Value', 
+	required => 0,
+	reader => 'raw_value',
+	init_arg => 'value',
+);
+
+has 'type' => (
+	is => 'ro',
+	isa => 'Value',
+	required => 1,
+	reader => 'get_type',
+);
 
 BEGIN {
 	eval { 
@@ -27,96 +44,82 @@ use overload
 	fallback => 1
 ;
 
-use base qw(SNMP::Class::OID);
 
-my %callback=();
+my @plugins;
+
+sub BUILDARGS {
+	####DEBUG Dumper(@_);
+	defined( my $class = shift ) or confess "missing class argument";
+	my %arg_h = (@_);
+
+	if(defined($arg_h{varbind})) {
+		my $varbind = $arg_h{varbind};
+		croak "new was called with a varbind that was not an SNMP::Varbind." 
+			unless (eval { $varbind->isa('SNMP::Varbind') } );
+
+		my $part1 = SNMP::Class::OID->new($varbind->[0]);
+		my $part2 = ((!exists($varbind->[1]))||($varbind->[1] eq ''))? SNMP::Class::OID->new('0.0') : SNMP::Class::OID->new($varbind->[1]);
+		$arg_h{oid} = $part1 . $part2;
+		croak "Internal error. Self is not an SNMP::Class::OID object!" 
+			unless ($arg_h{oid}->isa("SNMP::Class::OID"));
+
+		$arg_h{type} = $varbind->[3];
+		$arg_h{value} = $varbind->[2];
+
+	}
+
+	return \%arg_h;
+}
+
+sub BUILD {
+	defined( my $self = shift ) or confess "missing argument";
+	for my $plugin (@plugins) {
+		no strict 'refs';
+		&{"${plugin}::adopt"}($self);
+	}
+};
+
+		
 
 
 =head2 new(oid=>$oid,type=>$type,value=>$value)
 
-Constructor. $oid can be either a string or an L<SNMP::Class::OID>. Normally this method should almost never be used, as the user rarely has to construct this kind of objects by hand. 
+Constructor. $oid can be either a string or an L<SNMP::Class::OID>. Normally this method should almost never be used, as the user rarely has to construct this kind of object by hand. 
 
 =cut
 	
-sub new {
-	my $class = shift(@_) or croak "Incorrect call to new";
-	my $self;
 	
-	my %arg_h = (@_);
 	
-	if(defined($arg_h{varbind})) {
-		my $varbind = $arg_h{varbind};
-		croak "new was called with a varbind that was not an SNMP::Varbind." unless (eval { $varbind->isa("SNMP::Varbind") } );
-		my $object = SNMP::Class::OID->new($varbind->[0]);
-		my $instance = ((!exists($varbind->[1]))||($varbind->[1] eq ''))? SNMP::Class::OID->new('0.0') : SNMP::Class::OID->new($varbind->[1]);
-		$self = $object . $instance;#make sure that marginal cases produce correct overloaded '+' result
-		croak "Internal error. Self is not an SNMP::Class::OID object!" unless ($self->isa("SNMP::Class::OID"));
-		$self->{type} = $varbind->[3];
-		$self->{raw_value} = $varbind->[2];
-		#@#$self->{value} = $self->construct_value;
-
-	}
-	else {
-		croak "Cannot create a new varbind without an oid" unless defined($arg_h{oid});
-
-		#check * check * check
-		#We **must** have a valid type
-		#otherwise, something is seriously wrong because no varbind can exist without a type
-		#so, just bail if the type is not set
-		croak "Error: Attempted creation of varbind without type (arguments where: @_)" unless defined($arg_h{type});
-		
-		if (eval { $arg_h{oid}->isa("SNMP::Class::OID") }) {
-			#we just keep it intact and continue
-			$self = $arg_h{oid};
-		} 
-		else {
-			#let's assume that argument was a plain string
-				$self = $class->SUPER::new($arg_h{oid});
-		}
-		for my $field (qw(type value raw_value)) {
-			if(defined($arg_h{$field})) {
-				$self->{$field} = $arg_h{$field};
-			}
-		}
-	}
-
-	
-	#default fallback: value coincides with raw_value
-	#this may be freely modified later
-	if(defined($self->{raw_value})) {
-		$self->{value} = $self->{raw_value};
-	}
-	
-	#we now have an almost complete object. Let's see if there is any more functionality inside a callback
-	#If we can find some special sort of functionality available, we will return an enhanced object
-	#instead of a simple SNMP::Class::Varbind
-
-	#case 1: Object has handler for the specific callback (example: ipForwarding) (example2: sysUpTime)
-	if($self->has_label && defined($callback{label}->{$self->get_label})) {
-		DEBUG "There is a special callback for label ".$self->get_label;
-		bless $self,$callback{label}->{$self->get_label};
-		if($self->can("initialize_callback_object")) {
-			DEBUG "Calling initializing method for ".$callback{label}->{$self->get_label};
-			$self->initialize_callback_object;
-		}
-
-	}
-	#case 2: Object has handler for its syntax. (example: IpAddress) 
-	elsif($self->has_syntax && defined($callback{syntax}->{$self->get_syntax})) {
-		DEBUG "There is a special callback for syntax ".$self->get_syntax;
-		bless $self,$callback{syntax}->{$self->get_syntax};
-		if($self->can("initialize_callback_object")) {
-			DEBUG "Calling initializing method for ".$callback{syntax}->{$self->get_syntax};
-			$self->initialize_callback_object;
-		}
-	}
-	#case 3: Nothing special about this object, just return an SNMP::Class::Varbind
-	else {
-		bless $self,$class;
-	}
-
-	return $self;
-}
+#@@#	#we now have an almost complete object. Let's see if there is any more functionality inside a callback
+#@@#	#If we can find some special sort of functionality available, we will return an enhanced object
+#@@#	#instead of a simple SNMP::Class::Varbind
+#@@#
+#@@#	#case 1: Object has handler for the specific callback (example: ipForwarding) (example2: sysUpTime)
+#@@#	if($self->has_label && defined($callback{label}->{$self->get_label})) {
+#@@#		DEBUG "There is a special callback for label ".$self->get_label;
+#@@#		bless $self,$callback{label}->{$self->get_label};
+#@@#		if($self->can("initialize_callback_object")) {
+#@@#			DEBUG "Calling initializing method for ".$callback{label}->{$self->get_label};
+#@@#			$self->initialize_callback_object;
+#@@#		}
+#@@#
+#@@#	}
+#@@#	#case 2: Object has handler for its syntax. (example: IpAddress) 
+#@@#	elsif($self->has_syntax && defined($callback{syntax}->{$self->get_syntax})) {
+#@@#		DEBUG "There is a special callback for syntax ".$self->get_syntax;
+#@@#		bless $self,$callback{syntax}->{$self->get_syntax};
+#@@#		if($self->can("initialize_callback_object")) {
+#@@#			DEBUG "Calling initializing method for ".$callback{syntax}->{$self->get_syntax};
+#@@#			$self->initialize_callback_object;
+#@@#		}
+#@@#	}
+#@@#	#case 3: Nothing special about this object, just return an SNMP::Class::Varbind
+#@@#	else {
+#@@#		bless $self,$class;
+#@@#	}
+#@@#
+#@@#	return $self;
+#@@#}
 
 #user should not have to know about this method. Used internally. 
 
@@ -148,11 +151,11 @@ sub new {
 
 #I am lazy + I don't want to repeat the same code over and over
 #So, I construct these 6 methods by using this nifty trick
-for my $item (qw(object instance type raw_value value)) {
-	no strict 'refs';#only temporarily 
-	*{$item} = sub { return $_[0]->{$item} };
-	use strict;
-}
+#for my $item (qw(object instance type raw_value value)) {
+#	no strict 'refs';#only temporarily 
+#	*{$item} = sub { return $_[0]->{$item} };
+#	use strict;
+#}
 
 #this the opposite from new_from_varbind. You get the SNMP::Varbind. Warning, you only get the correct oid, but you shouldn't get types,values,etc.s 
 sub generate_varbind {
@@ -229,11 +232,8 @@ sub dump {
 }
 
 #this is a class method. Other modules wishing to register themselves as varbind handlers must use it. 
-sub register_handler {
-	my $type_of_callback = shift(@_);#type can be object,syntax
-	my $identifier = shift(@_);
-	my $callback = shift(@_);
-	$callback{$type_of_callback}->{$identifier} = $callback;
+sub register_plugin {
+	push @plugins,($_[0]);
 }
 	
 	
@@ -332,5 +332,9 @@ This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
 =cut
+
+no Moose;
+
+__PACKAGE__->meta->make_immutable;
 
 1; # End of SNMP::Class::Varbind
