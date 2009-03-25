@@ -19,7 +19,11 @@ $has_netsnmp = ($@)? 0 : 1;
 
 subtype 'ArrayRefOfInts' => as 'ArrayRef[Int]';
 
-type 'NetSNMP::OID' => where { eval { $_->isa('NetSNMP::OID') } };
+type 'NetSNMP::OID' => where { 
+	my $status = eval { $_->isa('NetSNMP::OID') }; 
+	return if $@; 
+	return $status;
+};
 
 coerce 'ArrayRefOfInts' 
 	=> from 'NetSNMP::OID'
@@ -189,8 +193,12 @@ Returns the label for this oid if it exists or undef if it doesn't.
 =cut
 
 sub get_label {
-	my $self = shift(@_);
-	return SNMP::Class::Utils::label_of($self->numeric);
+	return $_[0]->_get_label if $_[0]->has_label;
+	confess "No label known for ".$_[0]->numeric;
+}
+
+sub _get_label {
+	return SNMP::Class::Utils::label_of($_[0]->numeric);
 }
 
 =head2 get_label_oid
@@ -200,10 +208,7 @@ Returns an SNMP::Class::OID object corresponding to the appropriate object-id. F
 =cut
 
 sub get_label_oid {
-	my $self = shift(@_);
-	my $label = $self->get_label;
-	return unless defined($label);
-	return __PACKAGE__->new($label);
+	return __PACKAGE__->new($_[0]->get_label);
 }
 
 
@@ -214,7 +219,8 @@ Tells if there is a label for the object. Convenience shortcut instead of testin
 =cut
 
 sub has_label {
-	return defined($_[0]->get_label);
+	my $label = $_[0]->_get_label;
+	return 1 if ( defined($label) && $label );
 }
 
 =head2 get_instance_oid
@@ -224,14 +230,16 @@ Returns an SNMP::Class::OID object corresponding to the instance of this oid. Fo
 =cut
 
 sub get_instance_oid {
-	my $self = shift(@_);
+	defined(my $self = shift(@_)) or confess "incorrect call";
 	my $label_oid = $self->get_label_oid;
-	return unless defined($label_oid);
+	confess "no instance for ".$self->to_string.'('.$self->numeric.')' 
+		unless $self->has_instance;
 	my $start = $label_oid->length+1;
 	my $end = $self->length;
-	return if($start>$end);
+	confess "start $start cannot be longer than the end $end" if($start>$end);
 	return $self->slice($start,$end);
 }
+
 
 =head2 has_instance
 
@@ -240,7 +248,19 @@ Tells if there is an instance for the object. Convenience shortcut instead of te
 =cut
 
 sub has_instance {
-	return defined($_[0]->get_instance_oid);
+	defined(my $self = shift(@_)) or confess "incorrect call";
+	#first of all, to have an instance we must also have a label
+	return unless $self->has_label;
+	#ok, we have a label -- but do we have more numbers to constitute the instance?
+	my $label_oid = $self->get_label_oid;
+	#normal case: we are a label and nothing more (example: ifDescr )
+	return if($self->length == $label_oid->length);	
+	#ok last check, we should have at least 1 number at the end
+	return 1 if($self->length > $label_oid->length);
+	#ditch. 
+	confess "internal error. It would appear that ".$self->numeric.
+		" is shorter than its label ".$label_oid->numeric;
+	
 }
 	
 	
@@ -338,6 +358,7 @@ Returns a string representation of the object. Difference with numeric is that n
 sub to_string {
 	defined( my $self = shift ) or confess "incorrect call";
 	return $self->get_label.$self->get_instance_oid->numeric if($self->has_label&&$self->has_instance);
+	return $self->get_label if $self->has_label;
 	return $self->numeric;#fallback 
 	
 }

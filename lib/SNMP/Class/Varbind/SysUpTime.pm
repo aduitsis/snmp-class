@@ -15,7 +15,6 @@ has 'absolute_time' => (
 	default => sub { scalar localtime ($_[0]->raw_value + time)  },
 );
 	
-
 #we have to call the register_callback function in the INIT block to make sure
 #that the SNMP::Class::Varbind module is actually loaded
 INIT {

@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use warnings;
 use strict;
@@ -101,13 +101,20 @@ ok($oid15->get_label_oid == "ifDescr","get_label_oid on ifDescr.14");
 ok($oid15->get_instance_oid == ".14","get_instance_oid on ifDescr.14");
 my $oid16 = SNMP::Class::OID->new("ifTable");
 ok($oid16->get_label_oid == "ifTable","get_label_oid on ifTable");
-ok(!defined($oid16->get_instance_oid),"get_instance_oid on ifTable");
+eval { $oid16->get_instance_oid };
+ok($@,"get_instance_oid on ifTable should fail");
+ok(!$oid16->has_instance,"has_instance returns false for ifTable");
 my $oid17 = SNMP::Class::OID->new(".10.11.12");
-ok(!defined($oid17->get_label_oid),"get_label_oid on something that does not exist");
-ok(!defined($oid17->get_instance_oid),"get_instance_oid on something that does not exist");
+eval { $oid17->get_label_oid };
+ok($@,"get_label_oid should fail for something that does not exist");
+ok(!$oid17->has_label,"has_label returns false for something that doesn't exist");
+eval { $oid17->get_instance_oid };
+ok($@,"get_instance_oid should fail for something that does not exist");
+ok(!$oid17->has_instance,"has_instance returns false for something that doesn't exist");
 my $oid18 = SNMP::Class::OID->new("sysUpTime.0");
 ok($oid18->get_label_oid == "sysUpTimeInstance","get_label_oid on sysUpTime");
-ok(!defined($oid18->get_instance_oid),"get_instance_oid on something that does not exist");
+eval { $oid18->get_instance_oid };
+ok($@,"get_instance_oid should fail on something that does not have one");
 my $oid19 = SNMP::Class::OID->new("sysName.0");
 ok($oid19->get_label_oid == "sysName","get_label_oid on ifDescr.14");
 ok($oid19->get_instance_oid == ".0","get_instance_oid on ifDescr.14");

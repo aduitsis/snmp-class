@@ -129,8 +129,14 @@ sub BUILD {
 			$logger->debug("null session. Next.");
 		}
 		my $name;
-		if(eval { $name = $self->get_oid('sysName.0') }) {
-			$logger->debug("get_oID(sysName.0) success. Name = $name");
+		eval { $name = $self->get_oid('sysName.0') };
+		if($@) {
+			$logger->debug("getOID(sysName,0) failed. Error is $@");
+			$logger->debug("Going to next SNMP version");
+			next;
+		} 
+		else  {
+			DEBUG "get_OID(sysName.0) success. Name = $name";
 			#if we got to this point, then this means that
 			#we were able to retrieve the sysname variable from the session
 			#session is probably good
@@ -139,12 +145,7 @@ sub BUILD {
 			$version{$obj_ID} = $version;
 			$community{$obj_ID} = $arg_ref->{Community};
 			return 1;
-		} else { 
-			$logger->debug("getOID(sysName,0) failed. Error is $@");
-			$logger->debug("Going to next SNMP version");
-			next;
-		}
-		
+		} 
 	}
 	#if we got here, the session could not be created
 	$logger->debug("session could not be created after all");
@@ -168,20 +169,14 @@ sub deactivate_bulkwalks {
 
 sub get_oid {
 	
-	my $self = shift(@_) or croak "getvar called outside of an object context";
-	my $oid = shift(@_) or croak "first arg to getvar (oid), missing";
-	####my $instance = shift(@_); #instance could be 0, so we do not check
-	####if (!defined($instance)) { confess "second arg to getvar (instance), missing" }
+	defined(my $self = shift(@_)) or croak "incorrect call";
+	defined(my $oid = shift(@_)) or croak "first arg (oid), missing";
 	my $id = ident $self;
 
-	####my $vars = new SNMP::VarList([$oid,$instance]) or confess "Internal Error: Could not create a new SNMP::VarList for $oid.$instance";
-
-	my @a = $session{$id}->get($oid);
-
-	#print Dumper(@a);
+	my @a = $session{$id}->get(SNMP::Class::OID->new($oid)->oid);
 
 	confess $session{$id}->{ErrorStr} if ($session{$id}->{ErrorNum} != 0);
-	croak "Got error when tried to ask $session{$id}->{DestHost} for $oid" if ($a[0] eq "NOSUCHINSTANCE");
+	croak "Got NO-SUCH-INSTANCE when tried to ask $session{$id}->{DestHost} for $oid" if ($a[0] eq "NOSUCHINSTANCE");
 
 	return $a[0];
 }
@@ -310,7 +305,7 @@ sub bulk:RESTRICTED() {
 
 	for my $object (@{$temp}) {
 		my $vb = SNMP::Class::Varbind->new(varbind=>$object);		
-		DEBUG $vb->dump;
+		DEBUG $vb->to_string;
 		#put it in the bag
 		$ret->push($vb);
 	}					

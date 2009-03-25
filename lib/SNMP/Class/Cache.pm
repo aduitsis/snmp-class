@@ -62,7 +62,11 @@ sub add {
 	my $self = shift(@_) or confess "missing self argument";
 	LOOP: while (my $module = shift(@_)) {
 		my $temp;
-		if (eval { $temp = $self->SUPER::walk($module) }) {
+		eval { $temp = $self->SUPER::walk($module) };	
+		if ($@) {
+			cluck "attempt to walk $module failed";
+			$logger->debug("error getting $module: $@");
+		} else {
 			$logger->debug("fetched contents of $module");
 			if ($temp->is_empty) {
 				carp $self->get_name," does not seem to have any $module instances";
@@ -70,9 +74,6 @@ sub add {
 			} 
 			$module{ident $self}->{$module} = 1;
 			$self->append($temp);
-		} else {
-			cluck "attempt to walk $module failed";
-			$logger->debug("error getting contents of $module");
 		}
 	}
 

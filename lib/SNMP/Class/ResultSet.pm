@@ -227,7 +227,9 @@ sub match_instance {
 	return unless defined($x->get_label_oid);
 	#this may need some changes later
 	return unless defined($y->get_label_oid);
-	return $x->get_instance_oid->oid_is_equal( $y->get_instance_oid );
+	#DEBUG "x is ".$x->get_instance_oid->dump;
+	#DEBUG "y is ".$y->dump;
+	return $x->get_instance_oid->oid_is_equal( $y );
 }
 
 sub match_fulloid {
