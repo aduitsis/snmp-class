@@ -51,16 +51,13 @@ This module aims to enable snmp-related tasks to be carried out with the best po
 
 =cut
 
-use warnings;
-use strict;
+use Moose;
 use Carp;
 use Data::Dumper;
-use SNMP;
 use SNMP::Class::ResultSet;
 use SNMP::Class::Varbind;
 use SNMP::Class::OID;
 use SNMP::Class::Utils;
-use Class::Std;
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init({
@@ -69,7 +66,33 @@ Log::Log4perl->easy_init({
 });
 my $logger = get_logger();
 
+#try to load the SNMP libraries from NetSNMP
+my %have;
+eval { require SNMP; SNMP->import(); }; 
+if($@) {
+	confess "Sorry...cannot load SNMP"
+}
+else {
+	$have{SNMP} = 1;
+}
+
+exit;
+	
+
 ####&SNMP::loadModules('ALL');
+
+
+has 'netsnmp_session' => (
+	isa => 'SNMP::Session',
+	is => 'ro',
+	required => 1, #when we are going to get alternatives, we'll switch that to 0
+);
+
+has 'use_bulkwalk' => (
+	isa => 'Bool',
+	is => 'rw',
+	required => 
+
 
 
 my (%session,%name,%version,%community,%deactivate_bulkwalks) : ATTRS;
@@ -85,7 +108,7 @@ This method creates a new session with a managed device. Argument must be a hash
 =cut
  
 
-sub BUILD {
+sub BBBBUILD {
 	my ($self, $obj_ID, $arg_ref) = @_;
 
 	croak "You must supply a DestHost in the arguments to new." unless defined($arg_ref->{DestHost});
@@ -245,7 +268,7 @@ sub walk {
 #		$bag->push(SNMP::Class::Varbind->new(
 #}
 
-sub get_varbind :PRIVATE() {
+sub get_varbind {
 	my $self = shift(@_) or confess "Incorrect call to get_varbind";
 	my $id = ident $self;
 	my $vb = shift(@_);
@@ -273,7 +296,7 @@ sub get_varbind :PRIVATE() {
 	
 
 
-sub bulk:RESTRICTED() {
+sub bulk {
 	my $self = shift(@_) or confess "Incorrect call to bulk, self argument missing";
 	my $id = ident $self;
 	my $oid = shift(@_) or confess "First argument missing in call to bulk";	
@@ -314,7 +337,7 @@ sub bulk:RESTRICTED() {
 
 
 #does an snmpwalk on the session object
-sub _walk:RESTRICTED() {
+sub _walk {
 	my $self = shift(@_) or confess "Incorrect call to _walk, self argument missing";
 	my $id = ident $self;
 	my $oid_str = shift(@_) or confess "First argument missing in call to get_data";
