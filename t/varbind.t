@@ -46,13 +46,16 @@ isa_ok($v5,"SNMP::Class::Varbind");
 isa_ok($v6,"SNMP::Class::Varbind");
 
 
-ok($v3->generate_varbind->isa("SNMP::Varbind"),"generate_varbind check");
+ok($v3->generate_netsnmpvarbind->isa("SNMP::Varbind"),"generate_varbind check");
 
 
-ok($v3->to_string eq "ifDescr.14=ethernet0","to_string method");
+ok($v3->to_varbind_string eq "ifDescr.14=ethernet0","to_string method");
 
 
 
+my $v7 = SNMP::Class::Varbind->new(oid=>'ifName',no_such_object=>1);
+ok($v7->no_such_object == 1,"No-such-object condition");
+ok($v7->to_varbind_string eq 'ifName(no such object)','No-such-object to_varbind_string');
 
 #print $ifTable->get_value;
 

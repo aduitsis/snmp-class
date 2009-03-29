@@ -28,7 +28,6 @@ has 'raw_value' => (
 	is => 'ro', #object is immutable
 	isa => 'Value | Undef', 
 	required => 0,
-	reader => 'raw_value',
 	init_arg => 'value',
 );
 
@@ -36,17 +35,23 @@ has 'type' => (
 	is => 'ro',
 	isa => 'Value | Undef',
 	required => 0,
-	reader => 'get_type',
 );
 
 has 'time' => (
 	is => 'ro',
 	isa => 'Num',
 	required => 0,
-	reader => 'get_time',
 	default => sub { return ($have_time_hires)? Time::HiRes::time : time; },
 );
 	
+has 'no_such_object' => (
+	is => 'ro',
+	isa => 'Bool',
+	required => 0,
+	default => 0,
+);
+
+
 
 
 use overload 
@@ -89,11 +94,15 @@ sub BUILD {
 
 		
 sub value {
+	confess 'You cannot ask for the value of an object that does not exist' if $_[0]->no_such_object;
 	return $_[0]->raw_value;
 }
 
-sub to_string {
-	if(defined($_[0]->value)) {
+sub to_varbind_string {
+	if($_[0]->no_such_object) {
+		return $_[0]->SUPER::to_string.'(no such object)';
+	}
+	elsif(defined($_[0]->value)) {
 		return $_[0]->SUPER::to_string.'='.$_[0]->value;
 	} 
 	else {
@@ -109,7 +118,7 @@ sub to_string {
 	
 
 #You get an SNMP::Varbind. Warning, you only get the correct oid, but you shouldn't get types,values,etc.s 
-sub generate_varbind {
+sub generate_netsnmpvarbind {
 	#maybe 'or' instead of || ? 
 	return SNMP::Varbind->new([$_[0]->numeric]) || croak "Cannot invoke SNMP::Varbind::new method with argument".$_[0]->numeric." \n";	
 }

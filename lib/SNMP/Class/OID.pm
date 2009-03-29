@@ -17,7 +17,7 @@ eval {
 $has_netsnmp = ($@)? 0 : 1;
 	
 
-subtype 'ArrayRefOfInts' => as 'ArrayRef[Int]';
+subtype 'OID_ArrayRefOfInts' => as 'ArrayRef[Int]';
 
 type 'NetSNMP::OID' => where { 
 	my $status = eval { $_->isa('NetSNMP::OID') }; 
@@ -25,7 +25,7 @@ type 'NetSNMP::OID' => where {
 	return $status;
 };
 
-coerce 'ArrayRefOfInts' 
+coerce 'OID_ArrayRefOfInts' 
 	=> from 'NetSNMP::OID'
 		=> via {
 			my @arr = $_->to_array;
@@ -60,7 +60,7 @@ coerce 'ArrayRefOfInts'
 
 has 'oid' => (
 	is => 'ro', #object is immutable
-	isa => 'ArrayRefOfInts', #an OID type is stored inside
+	isa => 'OID_ArrayRefOfInts', #an OID type is stored inside
 	reader => 'get_oid', #accessor, but I'm not sure it is too useful
 	coerce => 1, #if passed a NetSNMP::OID we will convert it
 	required => 1, #this attribute must be supplied
@@ -293,7 +293,7 @@ sub slice {
 }
 	
 
-sub oid {
+sub netsnmpoid {
 	confess "Sorry, NetSNMP::OID cannot be loaded...maybe NetSNMP not installed?" unless $has_netsnmp;
 	return NetSNMP::OID->new($_[0]->numeric);
 }
@@ -531,7 +531,7 @@ under the same terms as Perl itself.
 
 =cut
 
- no Moose;
+no Moose;
 
 __PACKAGE__->meta->make_immutable;
 

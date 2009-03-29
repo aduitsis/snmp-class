@@ -22,6 +22,7 @@ SKIP: {
 	};
 
 	skip "tests that require NetSNMP::OID",3  if $@;	
+	
 	$oid = NetSNMP::OID->new(".1.2.3.4.5");
 	isa_ok($oid,'NetSNMP::OID');
 
@@ -29,6 +30,8 @@ SKIP: {
 	isa_ok($oid10,'SNMP::Class::OID');
 
 	ok($oid2 == SNMP::Class::OID->new($oid),"basic OID comparison and construction from NetSNMP::OID");
+	
+	isa_ok($oid2->netsnmpoid,"NetSNMP::OID");
 
 }
 

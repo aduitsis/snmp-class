@@ -51,14 +51,25 @@ This module aims to enable snmp-related tasks to be carried out with the best po
 
 =cut
 
+#this also enables warnings and strict
 use Moose;
+use Moose::Util::TypeConstraints;
+
+
+#some common modules...
 use Carp;
 use Data::Dumper;
+
+#load our own
 use SNMP::Class::ResultSet;
 use SNMP::Class::Varbind;
 use SNMP::Class::OID;
 use SNMP::Class::Utils;
+use SNMP::Class::Role::Implementation::Dummy;
+use SNMP::Class::Role::Implementation::NetSNMP;
 
+
+#setup logging
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init({
 	level=>$DEBUG,
@@ -66,36 +77,75 @@ Log::Log4perl->easy_init({
 });
 my $logger = get_logger();
 
-#try to load the SNMP libraries from NetSNMP
-my %have;
-eval { require SNMP; SNMP->import(); }; 
-if($@) {
-	confess "Sorry...cannot load SNMP"
-}
-else {
-	$have{SNMP} = 1;
-}
-
-exit;
-	
 
 ####&SNMP::loadModules('ALL');
 
 
-has 'netsnmp_session' => (
-	isa => 'SNMP::Session',
+#has 'netsnmp_session' => (
+#	isa => 'SNMP::Session',
+#	is => 'ro',
+#	required => 1, #when we are going to get alternatives, we'll switch that to 0
+#);
+
+subtype 'Version_ArrayRefOfInts' => as 'ArrayRef[Int]';
+
+subtype 'VersionString' 
+	=> as 'Str'
+	=> where { my $str = $_; grep { $str eq $_ } ('1','2','2c','3') }
+	=> message { "Version is not valid. Use 1,2,2c or 3." };
+
+coerce 'Version_ArrayRefOfInts'
+	=> from 'VersionString'
+		=> via { 
+			my $str =($_ eq '2c')? 2 : $_; 
+			return [$str] 
+		};
+
+has 'hostname' => (
+	isa => 'Str',
 	is => 'ro',
-	required => 1, #when we are going to get alternatives, we'll switch that to 0
+	required => 1,
 );
 
-has 'use_bulkwalk' => (
-	isa => 'Bool',
-	is => 'rw',
-	required => 
+has 'possible_versions' => (
+	isa => 'Version_ArrayRefOfInts',
+	is => 'ro',
+	default => sub { [2,1] },
+	coerce => 1,
+	init_arg => 'version',  
+);
+
+has 'community' => (
+	isa => 'Str',
+	is => 'ro',
+	default => 'public',
+);
+
+has 'port' => (
+	isa => 'Num',
+	is => 'ro',
+	default => 161,
+);
+
+my (%session,%name,%version,%community,%deactivate_bulkwalks);
 
 
+sub BUILDARGS {
+	defined( my $class = shift ) or confess "missing class argument";
+	if( @_ == 1 ) {
+		return { hostname => shift };
+	} 
+	else {
+		return $class->SUPER::BUILDARGS(@_);
+	}	
+}
 
-my (%session,%name,%version,%community,%deactivate_bulkwalks) : ATTRS;
+
+sub BUILD {
+		SNMP::Class::Role::Implementation::NetSNMP->meta->apply($_[0]);
+		$_[0]->create_session;
+}
+
 
 
 =head2 new({DestHost=>$desthost,Community=>$community,Version=>$version,DestPort=>$port})
@@ -108,86 +158,6 @@ This method creates a new session with a managed device. Argument must be a hash
 =cut
  
 
-sub BBBBUILD {
-	my ($self, $obj_ID, $arg_ref) = @_;
-
-	croak "You must supply a DestHost in the arguments to new." unless defined($arg_ref->{DestHost});
-
-	my $session;
-	my @versions = ( $arg_ref->{Version} );
-
-
-
-	#if the user did not specify a version, then we will try one after the other
-	if ( !defined($arg_ref->{Version})) {
-		@versions = ( "2" , "1" );
-	}	
-
-	#if the user has not supplied a community, why not try a default one?
-	if (!defined($arg_ref->{Community})) {
-		$arg_ref->{Community} = "public";
-	}	
-
-	if (!defined($arg_ref->{RemotePort})) {
-		$logger->debug("setting port to default (161)");
-		$arg_ref->{RemotePort} = 161;
-	}
-
-	$logger->info("Host is $arg_ref->{DestHost}, community is $arg_ref->{Community}");
-	
-	for my $version (@versions) {
-		$logger->debug("trying version $version");
-		
-		#set $arg_ref->{Version} to $version
-		$arg_ref->{Version}=$version;
-
-		#construct a string for debug purposes and log it
-		my $debug_str = join(",",map( "$_=>$arg_ref->{$_}", (keys %{$arg_ref})));
-		$logger->debug("doing SNMP::Session->new($debug_str)");
-
-		#construct the arguments we will be passing to SNMP::Session->new
-		my @argument_array = map { $_ => $arg_ref->{$_}  } (keys %{$arg_ref});
-		$session{$obj_ID} = SNMP::Session->new(@argument_array);
-		if(!$session{$obj_ID}) {
-			$logger->debug("null session. Next.");
-		}
-		my $name;
-		eval { $name = $self->get_oid('sysName.0') };
-		if($@) {
-			$logger->debug("getOID(sysName,0) failed. Error is $@");
-			$logger->debug("Going to next SNMP version");
-			next;
-		} 
-		else  {
-			DEBUG "get_OID(sysName.0) success. Name = $name";
-			#if we got to this point, then this means that
-			#we were able to retrieve the sysname variable from the session
-			#session is probably good
-			$logger->debug("Session should be ok.");
-			$name{$obj_ID} = $name;	
-			$version{$obj_ID} = $version;
-			$community{$obj_ID} = $arg_ref->{Community};
-			return 1;
-		} 
-	}
-	#if we got here, the session could not be created
-	$logger->debug("session could not be created after all");
-	croak "cannot initiate object for $arg_ref->{DestHost},$arg_ref->{Community}";
-
-}
-
-=head2 deactivate_bulkwalks
-
-If called, this method will permanently deactivate usage of bulkwalk for the session. Mostly useful for broken agents, some buggy versions of Net-SNMP etc. 
-
-=cut
-
-sub deactivate_bulkwalks {
-	my $self = shift(@_) or croak "deactivate_bulkwalks called outside of an object context";
-	my $id = ident $self;
-	$deactivate_bulkwalks{$id} = 1 ;
-	return;	
-}
 
 
 sub get_oid {
@@ -224,12 +194,12 @@ Returns the SNMP version of the session object.
 =cut
 
 #This method returns the SNMP version of the object
-sub get_version {
-	my $self = shift(@_);
-	confess "sub getVersion called outside of an object context" unless (ref $self);
-	my $id = ident $self;
-	return $version{$id};
-}
+#sub get_version {
+#	my $self = shift(@_);
+#	confess "sub getVersion called outside of an object context" unless (ref $self);
+#	my $id = ident $self;
+#	return $version{$id};
+#}
 
 
 =head2 walk
@@ -268,72 +238,10 @@ sub walk {
 #		$bag->push(SNMP::Class::Varbind->new(
 #}
 
-sub get_varbind {
-	my $self = shift(@_) or confess "Incorrect call to get_varbind";
-	my $id = ident $self;
-	my $vb = shift(@_);
-	my $bag = shift(@_);
 
-	my $varbind = $vb->generate_varbind;
-	my @a;
-	eval { @a = $session{$id}->get($varbind) }; 
-	if($@) {
-		confess "Could not make the initial GET request for ",$vb->to_string," because of error: ",$@;
-	}
-	if ($session{$id}->{ErrorNum} != 0) {
-		confess "Could not make the initial GET request  because of error: ".$session{$id}->{ErrorStr};
-		
-	}
-	if (($a[0] eq 'NOSUCHINSTANCE')||($a[0] eq 'NOSUCHOBJECT')) {
-		DEBUG "Skipping initial object ".$vb->to_string;
-		return;
-	}
-	my $vb2 = SNMP::Class::Varbind->new(varbind=>$varbind);
-	DEBUG "Pushing initial varbind ".$vb2->dump." to the resultset";
-	$bag->push( $vb2 );
-	DEBUG $bag->dump;
-}
 	
 
 
-sub bulk {
-	my $self = shift(@_) or confess "Incorrect call to bulk, self argument missing";
-	my $id = ident $self;
-	my $oid = shift(@_) or confess "First argument missing in call to bulk";	
-	
-	$oid = SNMP::Class::OID->new($oid);
-	$logger->debug("Object to bulkwalk is ".$oid->to_string);
-
-	#create the varbind
-	#was: my $vb = SNMP::Class::Varbind->new($oid) or confess "cannot create new varbind for $oid";
-	my $vb = SNMP::Class::Varbind->new(oid=>$oid);
-	croak "vb is not an SNMP::Class::Varbind" unless (ref $vb eq 'SNMP::Class::Varbind');
-
-	#create the bag
-	my $ret = SNMP::Class::ResultSet->new;
-
-	#make the initial GET request and put it in the bag
-	$self->get_varbind($vb,$ret);
-
-	#the first argument is definitely 0, we don't want to just emulate an snmpgetnext call
-	#the second argument is tricky. Setting it too high (example: 100000) tends to berzerk some snmp agents, including netsnmp.
-	#setting it too low will degrade performance in large datasets since the client will need to generate more traffic
-	#So, let's set it to some reasonable value, say 10.
-	#we definitely should consider giving the user some knob to turn.
-	#After all, he probably will have a good sense about how big the is walk he is doing.
-	
-	my ($temp) = $session{$id}->bulkwalk(0,10,$vb->generate_varbind); #magic number 10 for the time being
-	#make sure nothing went wrong
-	confess $session{$id}->{ErrorStr} if ($session{$id}->{ErrorNum} != 0);
-
-	for my $object (@{$temp}) {
-		my $vb = SNMP::Class::Varbind->new(varbind=>$object);		
-		DEBUG $vb->to_string;
-		#put it in the bag
-		$ret->push($vb);
-	}					
-	return $ret;
-}
 
 
 #does an snmpwalk on the session object
@@ -496,5 +404,9 @@ This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
 =cut
+
+no Moose;
+
+__PACKAGE__->meta->make_immutable;
 
 1; # End of SNMP::Class
