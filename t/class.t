@@ -25,9 +25,19 @@ $a = SNMP::Class->new(hostname=>'localhost');
 isa_ok($a,"SNMP::Class");
 
 
-
-
 my $r = $a->bulk('ifTable');
+
+isa_ok($r,'SNMP::Class::ResultSet');
+
+$r = $a->snmpgetnext(SNMP::Class::OID->new('sysDescr.0'));
+
+isa_ok($r,'SNMP::Class::Varbind');
+
+$r = $a->walk('system');
 
 #print $r->dump;
 
+
+#print $r->dump;
+
+#$r = $a->walk('.1');

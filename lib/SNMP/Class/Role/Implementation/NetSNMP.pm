@@ -42,7 +42,7 @@ sub init {	#no need to use eval here...it is taken care of by the Implementation
 	
 	DEBUG "parameters are ".join(',',@params);
 	my $session = SNMP::Session->new(@params);
-	confess "Undef session returned from SNMP::Session::new with parameters ".join(',',@params) unless defined($session);
+	die "Undef session returned from SNMP::Session::new with parameters ".join(',',@params) unless defined($session);
 	DEBUG "SNMP::Session creation successful";
 	return $session;
 	
@@ -51,21 +51,23 @@ sub init {	#no need to use eval here...it is taken care of by the Implementation
 sub snmpget {
 	defined( my $self = shift ) or confess "missing argument";
 	defined( my $oid = shift ) or confess "missing oid argument";
-	confess "Parameter to SNMP::Class::Role::Implementation::NetSNMP::snmpget should be an SNMP::Class::OID" unless $oid->isa("SNMP::Class::OID");
-	DEBUG "Trying to get ".$oid->to_string;
-	my @a = $self->session->get(SNMP::Class::OID->new($oid)->netsnmpoid);
-	confess $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
-	confess 'Got NO-SUCH-INSTANCE when tried to ask '.$self->hostname.' for '.$oid->to_string if ($a[0] eq "NOSUCHINSTANCE");		
-	return SNMP::Class::Varbind->new(oid=>$oid,value=>$a[0],no_such_object=>($a[0] eq "NOSUCHOBJECT")? 1 : 0);
+	confess "Argument not an SNMP::Class::OID" unless $oid->isa('SNMP::Class::OID');	
+	DEBUG "snmpget ".$oid->to_string;
+	
+	my $netsnmpvarbind = SNMP::Class::Varbind->new(oid=>$oid)->generate_netsnmpvarbind;
+	my @a = $self->session->get($netsnmpvarbind);
+	#DEBUG Dumper($netsnmpvarbind);
+	die $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
+	die 'Got NO-SUCH-INSTANCE when tried to ask '.$self->hostname.' for '.$oid->to_string if ($a[0] eq "NOSUCHINSTANCE");		
+	return SNMP::Class::Varbind->new(varbind=>$netsnmpvarbind);
 }
 	
 			
 sub snmpbulkwalk {
 	defined( my $self = shift ) or confess "missing argument";
-	
 	defined( my $oid = shift ) or confess "missing oid argument";	
 	confess "Argument not an SNMP::Class::OID" unless $oid->isa('SNMP::Class::OID');
-	DEBUG 'Object to bulkwalk is '.$oid->to_string;
+	DEBUG 'bulkwalk'.$oid->to_string;
 
 	#create the varbind
 	my $vb = SNMP::Class::Varbind->new(oid=>$oid);
@@ -87,8 +89,7 @@ sub snmpbulkwalk {
 	#After all, he probably will have a good sense about how big the is walk he is doing.
 	
 	my ($temp) = $self->session->bulkwalk(0,10,$vb->generate_netsnmpvarbind); #magic number 10 for the time being
-	#make sure nothing went wrong
-	confess $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
+	die $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
 
 	for my $object (@{$temp}) {
 		my $vb = SNMP::Class::Varbind->new(varbind=>$object);		
@@ -103,14 +104,16 @@ sub snmpgetnext {
 	defined( my $self = shift ) or confess "missing argument";
 	defined( my $oid = shift ) or confess "missing oid argument";	
 	confess "Argument not an SNMP::Class::OID" unless $oid->isa('SNMP::Class::OID');
-	DEBUG 'Object to snmpgetnext is '.$oid->to_string;
+	
+	DEBUG 'snmpgetnext '.$oid->to_string;
+	
 	my $vb = SNMP::Class::Varbind->new(oid=>$oid);
 	my $netsnmp_varbind = $vb->generate_netsnmpvarbind;
 	
-	my $value = $session{$id}->getnext($netsnmp_varbind);
-	confess $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
+	my $value = $self->session->getnext($netsnmp_varbind);
+	die $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
 	
-	$vb = SNMP::Class::Varbind->new(varbind=>$netsnmp_varbind);
+	return SNMP::Class::Varbind->new(varbind=>$netsnmp_varbind);
 
 }
 

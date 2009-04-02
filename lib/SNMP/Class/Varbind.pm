@@ -24,6 +24,8 @@ else {
 
 extends 'SNMP::Class::OID';
 
+
+
 has 'raw_value' => (
 	is => 'ro', #object is immutable
 	isa => 'Value | Undef', 
@@ -43,13 +45,7 @@ has 'time' => (
 	required => 0,
 	default => sub { return ($have_time_hires)? Time::HiRes::time : time; },
 );
-	
-has 'no_such_object' => (
-	is => 'ro',
-	isa => 'Bool',
-	required => 0,
-	default => 0,
-);
+
 
 
 
@@ -63,7 +59,6 @@ use overload
 my @plugins;
 
 sub BUILDARGS {
-	#DEBUG Dumper(@_);
 	defined( my $class = shift ) or confess "missing class argument";
 	my %arg_h = (@_);
 
@@ -71,16 +66,26 @@ sub BUILDARGS {
 		my $varbind = $arg_h{varbind};
 		eval { $varbind->isa('SNMP::Varbind') };
 		croak "new was called with a varbind that was not an SNMP::Varbind." if $@;
-
 		my $part1 = SNMP::Class::OID->new($varbind->[0]);
 		my $part2 = ((!exists($varbind->[1]))||($varbind->[1] eq ''))? SNMP::Class::OID->new('0.0') : SNMP::Class::OID->new($varbind->[1]);
 		$arg_h{oid} = $part1 . $part2;
-		croak "Internal error. Self is not an SNMP::Class::OID object!" 
-			unless ($arg_h{oid}->isa("SNMP::Class::OID"));
-		$arg_h{type} = $varbind->[3];
-		$arg_h{value} = $varbind->[2];
+		croak "Internal error. Argument not an SNMP::Class::OID object!" unless ($arg_h{oid}->isa("SNMP::Class::OID"));
+		
+		#ok the type can have some special meaning...let us check
+		if(defined($varbind->[3])) {
+			if($varbind->[3] eq 'NOSUCHOBJECT') {			
+				$arg_h{type} = 'no such object';
+			}
+			elsif($varbind->[3] eq 'ENDOFMIBVIEW') {
+				$arg_h{type} = 'end of mib';
+			}
+			else {
+				$arg_h{type} = $varbind->[3];
+				$arg_h{value} = $varbind->[2];
+			}
+		}
+		delete $arg_h{varbind};#don't carry it around any more...it is useless
 	}
-
 	return \%arg_h;
 }
 
@@ -92,6 +97,13 @@ sub BUILD {
 	}
 };
 
+sub no_such_object {
+	return defined($_[0]->type) && ($_[0]->type eq 'no such object');
+}
+
+sub end_of_mib {
+	return defined($_[0]->type) && ($_[0]->type eq 'end of mib');
+}
 		
 sub value {
 	confess 'You cannot ask for the value of an object that does not exist' if $_[0]->no_such_object;
@@ -101,6 +113,9 @@ sub value {
 sub to_varbind_string {
 	if($_[0]->no_such_object) {
 		return $_[0]->SUPER::to_string.'(no such object)';
+	}
+	elsif($_[0]->end_of_mib) {
+		return 'End of MIB';
 	}
 	elsif(defined($_[0]->value)) {
 		return $_[0]->SUPER::to_string.'='.$_[0]->value;
@@ -117,7 +132,7 @@ sub to_varbind_string {
 =cut
 	
 
-#You get an SNMP::Varbind. Warning, you only get the correct oid, but you shouldn't get types,values,etc.s 
+#You get an SNMP::Varbind. Warning, you only get the correct oid, but you shouldn't get types,values,etc. 
 sub generate_netsnmpvarbind {
 	#maybe 'or' instead of || ? 
 	return SNMP::Varbind->new([$_[0]->numeric]) || croak "Cannot invoke SNMP::Varbind::new method with argument".$_[0]->numeric." \n";	

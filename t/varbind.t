@@ -11,25 +11,16 @@ BEGIN {
 	use_ok("SNMP::Class");
 }
 
-#my $s = SNMP::Class->new({ DestHost => 'localhost' });
-#$s->deactivate_bulkwalks;
 
-###my $ifTable = $s->walk("ifTable");
 
-#$ifTable->label("ifDescr","ifSpeed");
-#print $ifTable->value("en0")->dump;
-#print $ifTable->find("ifDescr"=>"en0")->ifSpeed;
-
-#my $ipf = $s->walk("ipForwarding")->value;
-
-#unless ($ipf->is_forwarding) {
-#	print STDERR "NOT forwarding\n\n";
-#}
+ok(SNMP::Class::Varbind->new(varbind=>bless( ['system','','NOSUCHOBJECT','NOSUCHOBJECT'], 'SNMP::Varbind' ))->no_such_object == 1,"no such object from SNMP::Varbind");
 
 my $vb1 = SNMP::Varbind->new(["ifDescr.33"]);
 isa_ok($vb1,"SNMP::Varbind");
 my $v4 = SNMP::Class::Varbind->new(varbind=>$vb1);
 isa_ok($v4,"SNMP::Class::Varbind");
+
+
 
 my $v1 = SNMP::Class::Varbind->new(oid=>SNMP::Class::OID->new('.1.2.3.4'),type=>'INTEGER');
 ok($v1->numeric eq '.1.2.3.4',"OID behavior");
@@ -53,9 +44,18 @@ ok($v3->to_varbind_string eq "ifDescr.14=ethernet0","to_string method");
 
 
 
-my $v7 = SNMP::Class::Varbind->new(oid=>'ifName',no_such_object=>1);
-ok($v7->no_such_object == 1,"No-such-object condition");
+my $v7 = SNMP::Class::Varbind->new(oid=>'ifName',type=>'no such object');
+ok($v7->no_such_object,"No-such-object condition");
 ok($v7->to_varbind_string eq 'ifName(no such object)','No-such-object to_varbind_string');
+
+$v7 = SNMP::Class::Varbind->new(oid=>'ifName',type=>'end of mib');
+ok($v7->end_of_mib,"End-of-mib condition");
+ok($v7->to_varbind_string eq 'End of MIB','End of mib to_varbind_string');
+
+
+
+
+
 
 #print $ifTable->get_value;
 

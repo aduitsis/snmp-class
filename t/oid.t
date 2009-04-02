@@ -89,7 +89,10 @@ ok($oid3 == SNMP::Class::OID->new(".3.102.111.111"),"String conversion test");
 ok($oid2->[0] eq 1,"array reference overloading subscript");
 is_deeply($oid_z->to_array,(0),"zero oid numeric representation"); 
 ok($oid_z->numeric eq '.0',"zero oid string representation"); 
-is_deeply($oid_dotz->to_array,(0),"zero oid numeric representation"); 
+is_deeply($oid_dotz->to_array,(0),"zero oid array representation"); 
+is_deeply($zDz->to_arrayref,[0,0],'zero dot array representation');
+ok($zDz->to_string eq 'zeroDotZero','zero dot zero string representation');
+ok($zDz->numeric eq '.0.0','zero dot zero numeric representation');
 ok($oid_dotz->numeric eq '.0',"zero oid string representation"); 
 ok($oid2->numeric eq ".1.2.3.4.5" ,"oid numeric method");
 ok($oid2->slice(1,2,3,4) == SNMP::Class::OID->new(".1.2.3.4"),"oid slicing explicit");
@@ -121,9 +124,6 @@ ok($@,"get_instance_oid should fail on something that does not have one");
 my $oid19 = SNMP::Class::OID->new("sysName.0");
 ok($oid19->get_label_oid == "sysName","get_label_oid on ifDescr.14");
 ok($oid19->get_instance_oid == ".0","get_instance_oid on ifDescr.14");
-
-
-
 
 
 
