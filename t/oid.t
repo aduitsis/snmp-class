@@ -39,7 +39,6 @@ my $oid221 = SNMP::Class::OID->new([1,2,3,4]);
 isa_ok($oid221,'SNMP::Class::OID');
 ok($oid221->length == 4,"length method");
 ok($oid221->numeric eq '.1.2.3.4',"numeric method");
-ok($oid221->to_string eq 'iso.2.3.4',"to_string method");
 
 
 my $oid223 = SNMP::Class::OID->new("ifName");
