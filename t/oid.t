@@ -123,7 +123,3 @@ ok($@,"get_instance_oid should fail on something that does not have one");
 my $oid19 = SNMP::Class::OID->new("sysName.0");
 ok($oid19->get_label_oid == "sysName","get_label_oid on ifDescr.14");
 ok($oid19->get_instance_oid == ".0","get_instance_oid on ifDescr.14");
-
-
-
-
