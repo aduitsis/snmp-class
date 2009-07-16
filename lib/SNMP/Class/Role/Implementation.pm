@@ -78,10 +78,10 @@ sub walk {
 	my $ret = SNMP::Class::ResultSet->new();
 	
 	#make the initial GET request and put it in the bag
-	my $returned_vb = $self->snmpget($oid);
-	DEBUG $returned_vb->to_varbind_string;
+	#@#my $returned_vb = $self->snmpget($oid);
+	#@#DEBUG $returned_vb->to_varbind_string;
 	#DEBUG $vb->dump;
-	$ret->push($returned_vb) unless($returned_vb->no_such_object);
+	#@#$ret->push($returned_vb) unless($returned_vb->no_such_object);
 
 	my $rolling_oid = $oid;
 	LOOP: while(1) {
@@ -89,7 +89,7 @@ sub walk {
 		####my $varbind = $vb->generate_varbind;
 
 		#call an SNMP GETNEXT operation
-		$returned_vb = $self->snmpgetnext($rolling_oid);
+		my $returned_vb = $self->snmpgetnext($rolling_oid);
 		DEBUG $returned_vb->to_varbind_string;
 		
 		#handle some special types

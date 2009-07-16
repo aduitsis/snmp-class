@@ -161,7 +161,6 @@ sub push {
 	
 	#using the get_oid inside a hash key will force it to use the overloaded '""' quote_oid subroutine
 	###$self->{oid_index}->{$payload->get_oid}->{$payload->get_instance_numeric} = \$payload;
-	
 }
 
 =head2 pop
