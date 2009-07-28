@@ -19,11 +19,19 @@ $has_netsnmp = ($@)? 0 : 1;
 
 subtype 'OID_ArrayRefOfInts' => as 'ArrayRef[Int]';
 
+#this is the type check validation for the 'NetSNMP::OID' data type
 type 'NetSNMP::OID' => where { 
 	my $status = eval { $_->isa('NetSNMP::OID') }; 
 	return if $@; 
 	return $status;
 };
+
+
+#this coercion is for the initialization of the oid attribute.
+#use has the option to supply
+#1)A NetSNMP::OID, in which case it is converted (easily) to the array
+#2)A string
+#3)Another SNMP::Class::OID. 
 
 coerce 'OID_ArrayRefOfInts' 
 	=> from 'NetSNMP::OID'
@@ -69,7 +77,7 @@ has 'oid' => (
 
 
 sub BUILDARGS {
-	defined( my $class = shift ) or confess "missing class argument";
+	defined( my $class = shift ) or confess 'missing class argument';
 	if( @_ == 1 ) { #if we got only one argument, it must be the oid 
 		return { oid => shift };
 	} 
@@ -93,12 +101,15 @@ our $VERSION = '0.15';
 
  #create an object
  my $oid = SNMP::Class::OID->new('.1.3.6.1.2.1.1.5.0');
- #-or-
+ # or
  my $oid = SNMP::Class::OID->new('sysName.0');
+ # or
+ my $oid = SNMP::Class::OID->new(oid => 'sysName.0');
+ # or
+ my $oid = SNMP::Class::OID->new(oid => $another_snmp_class_oid_object);
+ # or
+ my $oid = SNMP::Class::OID->new(oid => $netsnmp_oid_object);
  
- #overloaded scalar representation
- print $oid; # evaluates to sysName.0
-
  #representations
  $oid->to_string; #string representation -- sysName.0
  $oid->numeric; #numeric representation -- .1.3.6.1.2.1.1.5.0
