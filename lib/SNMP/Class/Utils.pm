@@ -55,6 +55,12 @@ sub syntax_of {
 	return get_attr(shift,'syntax');
 }
 
+sub has_enums {
+	defined(my $oid = shift) or croak 'incorrect call';
+	return defined( enums_of($oid) );
+}
+	
+
 sub enums_of {
 	my $oid_name = shift(@_) or croak "Incorrect call to enums_of";
 	my $enum = SNMP::Class::Utils::get_attr($oid_name,"enums");

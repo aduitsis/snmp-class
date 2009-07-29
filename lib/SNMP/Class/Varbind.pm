@@ -51,7 +51,7 @@ has 'time' => (
 
 
 use overload 
-	'""' => \&value,
+#	'""' => \&value,
 	fallback => 1
 ;
 
