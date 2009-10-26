@@ -11,6 +11,7 @@ use Carp;
 use Log::Log4perl qw(:easy);
 use Data::Dumper;
 use SNMP::Class::Varbind::SysUpTime;
+use SNMP::Class::Varbind::Enum;
 
 my $have_time_hires;
 eval { require Time::HiRes };
@@ -105,6 +106,7 @@ sub end_of_mib {
 	return defined($_[0]->type) && ($_[0]->type eq 'end of mib');
 }
 		
+#in many cases this method will be overriden by other roles that will be applied later on the object
 sub value {
 	confess 'You cannot ask for the value of an object that does not exist' if $_[0]->no_such_object;
 	return $_[0]->raw_value;

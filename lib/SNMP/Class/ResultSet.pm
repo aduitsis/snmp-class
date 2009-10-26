@@ -223,9 +223,10 @@ sub match_label {
 
 sub match_instance {
 	my($x,$y) = @_;
-	return unless defined($x->get_label_oid);
+	return unless $x->has_instance;
+	#return unless defined($x->get_label_oid);
 	#this may need some changes later
-	return unless defined($y->get_label_oid);
+	#return unless defined($y->get_label_oid);
 	#DEBUG "x is ".$x->get_instance_oid->dump;
 	#DEBUG "y is ".$y->dump;
 	return $x->get_instance_oid->oid_is_equal( $y );
@@ -377,13 +378,16 @@ sub dot {
 	my $self = shift(@_) or croak "Incorrect call to dot";
 	my $str = shift(@_); #we won't test because it could be false, e.g. ifName.0
 	
-	$logger->debug("dot called with $str as argument");
+	#caveat emptor
+	#when $str is not a string, evul things will happen as $str will try to call something like:
+	#SNMP::Class::OID::add($object, 'dot called with ', 1)
+	####$logger->debug("dot called with $str as argument");
 
 	#we force scalar context
 	my $ret = scalar $self->filter_instance($str);
 
 	if ($ret->is_empty) {
-		confess "empty resultset";
+		confess "dot produced an empty resultset";
 	} 
 	if ($ret->number_of_items > 1) {
 		carp "Warning: resultset with more than 1 items";

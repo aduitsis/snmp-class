@@ -77,9 +77,9 @@ sub snmpbulkwalk {
 	my $ret = SNMP::Class::ResultSet->new;
 
 	#make the initial GET request and put it in the bag
-	$vb = $self->snmpget($vb);
-	DEBUG $vb->to_varbind_string;
-	$ret->push($vb) unless($vb->no_such_object);
+	#@#$vb = $self->snmpget($vb);
+	#@#DEBUG $vb->to_varbind_string;
+	#@#$ret->push($vb) unless($vb->no_such_object);
 	
 	#the first argument is definitely 0, we don't want to just emulate an snmpgetnext call
 	#the second argument is tricky. Setting it too high (example: 100000) tends to berzerk some snmp agents, including netsnmp.
