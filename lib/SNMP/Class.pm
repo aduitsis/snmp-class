@@ -69,13 +69,30 @@ use SNMP::Class::Role::Implementation::Dummy;
 use SNMP::Class::Role::Implementation::NetSNMP;
 
 
-#setup logging
-use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init({
-	level=>$DEBUG,
-	layout => "%M:%L %m%n",
-});
-my $logger = get_logger();
+###use Log::Log4perl qw(:easy);
+###Log::Log4perl->easy_init({
+###	level=>$DEBUG,
+###	layout => "%M:%L %m%n",
+###});
+###my $logger = get_logger();
+
+
+###############################################################
+
+# setup logging
+
+use Log::Log4perl;
+
+# try to find a universal.logger in the same path with this file
+
+for my $lib (@INC) {
+	my $logger_file = $lib.'/SNMP/SNMP-Class.logger';
+	if (-f $logger_file) {
+		Log::Log4perl->init($logger_file);
+	} 
+}
+
+###############################################################
 
 
 ####&SNMP::loadModules('ALL');
