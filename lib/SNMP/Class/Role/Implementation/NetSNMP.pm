@@ -1,9 +1,11 @@
 package SNMP::Class::Role::Implementation::NetSNMP;
 
-use Log::Log4perl qw(:easy);
 use Data::Dumper;
 use Moose::Role;
 use SNMP::Class::Role::Implementation;
+
+use Log::Log4perl qw(:easy);
+my $logger = Log::Log4perl->get_logger();
 
 
 #try to load the SNMP libraries from NetSNMP
@@ -67,7 +69,7 @@ sub snmpbulkwalk {
 	defined( my $self = shift ) or confess "missing argument";
 	defined( my $oid = shift ) or confess "missing oid argument";	
 	confess "Argument not an SNMP::Class::OID" unless $oid->isa('SNMP::Class::OID');
-	DEBUG 'bulkwalk'.$oid->to_string;
+	DEBUG 'bulkwalk '.$oid->to_string;
 
 	#create the varbind
 	my $vb = SNMP::Class::Varbind->new(oid=>$oid);
@@ -93,7 +95,7 @@ sub snmpbulkwalk {
 
 	for my $object (@{$temp}) {
 		my $vb = SNMP::Class::Varbind->new(varbind=>$object);		
-		DEBUG $vb->to_varbind_string;
+		TRACE $vb->to_varbind_string;
 		$ret->push($vb);
 	}		
 	return $ret;

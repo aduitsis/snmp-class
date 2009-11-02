@@ -255,7 +255,7 @@ sub match_callback {
 	return sub {		
 		for my $match_item (@matchlist) {
 			if ($match_sub_ref->($_,$match_item)) {
-				DEBUG "Item ".$_->to_string." matches"; 
+				TRACE "Item ".$_->to_string." matches"; 
 				return 1;
 			}
 		}

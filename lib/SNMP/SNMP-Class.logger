@@ -1,4 +1,4 @@
-log4perl.rootLogger=TRACE, Screen
+log4perl.rootLogger=INFO, Screen
 
 log4perl.appender.Screen				= Log::Log4perl::Appender::ScreenColoredLevels
 log4perl.appender.Screen.stderr				= 0
