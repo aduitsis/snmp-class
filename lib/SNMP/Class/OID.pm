@@ -325,6 +325,37 @@ sub to_arrayref {
 	return \@array;
 }
 
+=head2 to_number 
+
+For an OID of length exactly equal to 1, this method will return the oid
+in a plain number e.g. an oid like .3 will return just 3. This is useful
+to convert single oid instances to values. 
+
+=cut
+
+sub to_number {
+	defined( my $self = shift ) or confess "incorrect call";
+	if($self->length != 1) {
+		confess "Cannot invoke to_number on an object of length other than 1. ".$self->numeric." has a length of ".$self->length;
+	}
+	return $self->get_oid->[0];
+}
+
+
+=head2 varbind_from_number
+
+This method will create a varbind from its argument and set its value to
+be equal to the value that is returned by the to_number method of this
+object
+
+=cut
+
+sub varbind_from_number {
+	return SNMP::Class::Varbind->new( oid=>$_[1] , value=>$_[0]->to_number );
+}
+
+
+
 =head2 length
 
 Returns the length (in items) of the object OID.
