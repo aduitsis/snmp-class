@@ -4,7 +4,7 @@ our $VERSION = '0.15';
 
 
 use Moose;
-use Moose::Util::TypeConstraints;
+#use Moose::Util::TypeConstraints;
 
 use SNMP;
 use Carp;

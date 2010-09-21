@@ -22,7 +22,10 @@ else {
 
 with 'SNMP::Class::Role::Implementation';
 
-has '+session' => (
+has 'session' => (
+	is => 'rw',
+	required => 0,
+	init_arg => undef,
 	isa => 'SNMP::Session',
 );
 

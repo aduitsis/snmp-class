@@ -11,11 +11,16 @@ has 'version' => (
 	init_arg => undef,#user must not touch this
 );
  
-has 'session' => (
-	is => 'rw',
-	required => 0,
-	init_arg => undef,
-);
+#this used to be uncommented, but, at some Moose
+#version, using +session in one of the actual implementations
+#(example: SNMP::Class::Role::Implementation::NetSNMP)
+#became something that is not allowed. 
+
+#has 'session' => (
+#	is => 'rw',
+#	required => 0,
+#	init_arg => undef,
+#);
 
 has 'sysname' => (
 	is => 'rw',

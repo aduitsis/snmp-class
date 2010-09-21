@@ -7,7 +7,10 @@ use SNMP::Class::Role::Implementation;
 
 with 'SNMP::Class::Role::Implementation';
 
-has '+session' => (
+has 'session' => (
+	is => 'rw',
+	required => 0,
+	init_arg => undef,
 	isa => 'Str',  #this dummy package just returns a dummy string as a session
 ); 
 
