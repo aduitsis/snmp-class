@@ -12,6 +12,8 @@ use Log::Log4perl qw(:easy);
 use Data::Dumper;
 use SNMP::Class::Varbind::SysUpTime;
 use SNMP::Class::Varbind::Enum;
+use SNMP::Class::Varbind::Hex_Generic;
+use SNMP::Class::Varbind::MacAddress;
 
 my $have_time_hires;
 eval { require Time::HiRes };

@@ -51,6 +51,19 @@ sub textual_convention_of {
 	return get_attr($oid_name,'textualConvention');
 }
 
+sub has_textual_convention {
+	return defined(textual_convention_of($_[0]));
+}
+
+sub type_of {
+	my $oid_name = shift(@_) or croak "Incorrect call to type_of";
+	return get_attr($oid_name,'type');
+}
+
+sub has_type {
+	return defined(type_of($_[0]));
+}
+
 sub syntax_of {
 	return get_attr(shift,'syntax');
 }
