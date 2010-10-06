@@ -98,6 +98,7 @@ sub BUILD {
 		no strict 'refs';
 		&{"${plugin}::adopt"}($self);
 	}
+	TRACE $self->to_varbind_string." created. Available methods:".join(',',$self->meta->get_method_list)."\n";
 };
 
 sub no_such_object {
@@ -125,7 +126,7 @@ sub to_varbind_string {
 		return $_[0]->SUPER::to_string.'='.$_[0]->value;
 	} 
 	else {
-		return $_[0]->SUPER::to_string.'=undef';	
+		return $_[0]->SUPER::to_string.'=N/A';	
 	}
 }
 
