@@ -98,7 +98,11 @@ sub BUILD {
 		no strict 'refs';
 		&{"${plugin}::adopt"}($self);
 	}
-	TRACE $self->to_varbind_string." created. Available methods:".join(',',$self->meta->get_method_list)."\n";
+	#in the following trace, DO NOT use to_varbind_string. Why? 
+	#Because, it will try to query the value of the $self variable
+	#BUT we are not sure that the variable, which is an SNMP::Class::Varbind
+	#has a value yet. @@TODO maybe a better fix later for this issue
+	TRACE $self->to_string." created. Available methods:".join(',',$self->meta->get_method_list)."\n";
 };
 
 sub no_such_object {

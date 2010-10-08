@@ -1,6 +1,5 @@
 package SNMP::Class::Role::Implementation::NetSNMP;
 
-use Data::Dumper;
 use Moose::Role;
 use SNMP::Class::Role::Implementation;
 
@@ -58,7 +57,6 @@ sub snmpget {
 	defined( my $oid = shift ) or confess "missing oid argument";
 	confess "Argument not an SNMP::Class::OID" unless $oid->isa('SNMP::Class::OID');	
 	DEBUG "snmpget ".$oid->to_string;
-	
 	my $netsnmpvarbind = SNMP::Class::Varbind->new(oid=>$oid)->generate_netsnmpvarbind;
 	my @a = $self->session->get($netsnmpvarbind);
 	#DEBUG Dumper($netsnmpvarbind);

@@ -29,6 +29,15 @@ has 'sysname' => (
 	init_arg => undef,
 );
 
+has 'engine_id' => (
+	is => 'ro',
+	isa => 'Maybe[Str]',
+	required => 0,
+	init_arg => undef,
+	default => undef,
+	writer => '_set_engine_id',
+);
+
 sub create_session {		
 	defined( my $self = shift ) or confess "missing argument";
 		
@@ -49,11 +58,23 @@ sub create_session {
 			$sysname = $self->snmpget(SNMP::Class::OID->new('sysName.0'));
 		};
 		if($@) {
-			DEBUG "Cannot query sysName.0 with version $version (reason: $@) ... go to next";
+			DEBUG "Cannot query sysName.0 with version $version (reason: $@) ... going to the next possible snmp version";
 			next;
 		}
 
-		DEBUG 'Got sysname='.$sysname->value;
+		DEBUG $self->hostname.':sysname='.$sysname->value;
+
+		#let us also get the engine id
+		if($self->version > 1) {
+			eval {
+				my $id = $self->snmpget(SNMP::Class::OID->new('snmpEngineID.0'));
+				DEBUG $self->hostname.':SNMP Engine ID is '.$id->value;
+				$self->_set_engine_id( $id->value );
+			};
+			if($@) {
+				DEBUG 'Agent '.$self->hostname.'  does not have an engine id: '.$@;
+			}
+		}
 
 		return $self;#someone might want to use our object directly in the same line with the create_session method
 	}

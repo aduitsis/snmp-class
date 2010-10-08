@@ -25,13 +25,14 @@ sub matches {
 
 sub adopt {
 	if(matches($_[0])) { 
-		__PACKAGE__->meta->apply($_[0]);
 		DEBUG "Applying role ".__PACKAGE__." to ".$_[0]->get_label;
+		__PACKAGE__->meta->apply($_[0]);
 	}
 }
 
 sub value {
-	return uc join(' ',(unpack '(H2)*',$_[0]->raw_value))
+	defined($_[0]->raw_value) or confess 'Undefined argument';
+	return join(' ',(unpack '(H2)*',$_[0]->raw_value))
 }
 
 

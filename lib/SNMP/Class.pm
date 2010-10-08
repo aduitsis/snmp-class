@@ -161,9 +161,17 @@ sub BUILDARGS {
 sub BUILD {
 		SNMP::Class::Role::Implementation::NetSNMP->meta->apply($_[0]);
 		$_[0]->create_session;
+
+		#the session is also a resultset
+		SNMP::Class::Role::ResultSet->meta->apply($_[0]);
 }
 
-
+sub add {
+	defined(my $self = shift(@_) ) or croak 'incorrect call';
+	for my $to_walk (@_) {
+		$self->append($self->smart($to_walk));
+	}
+}
 
 =head2 new({DestHost=>$desthost,Community=>$community,Version=>$version,DestPort=>$port})
 
