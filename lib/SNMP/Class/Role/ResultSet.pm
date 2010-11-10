@@ -52,6 +52,22 @@ has 'varbinds' => (
 	default => sub { [] },
 );
 
+has '_fulloid_index' => (
+	isa => 'HashRef[Any]',
+	is => 'rw',
+	default => sub { {} },
+);
+has '_label_index' => (
+	isa => 'HashRef[Any]',
+	is => 'rw',
+	default => sub { {} },
+);
+has '_instance_index' => (
+	isa => 'HashRef[Any]',
+	is => 'rw',
+	default => sub { {} },
+);
+
 	
 
 =head1 METHODS
@@ -70,10 +86,12 @@ In scalar context, this method returns the object itself, while in list context 
 
 sub smart_return {
 	defined(my $context = wantarray) or croak "ResultSet used in null context";
+	$logger->logconfess('Empty resultset detected') if $_[0]->is_empty; #just making sure than an empty resultset will not come up
 	if ($context) { #list context
-		DEBUG "List context detected";
+		DEBUG 'List context detected';
 		return @{$_[0]->varbinds};
 	}
+	DEBUG 'Scalar context detected';
 	return $_[0];
 }
 
@@ -99,11 +117,16 @@ Since at this point the internal implementation uses just a regular array, order
 the future, so a program should really not depend on that behavior. 
 
 =cut
- 
+
 sub push {
-	defined(my $self = shift(@_) ) or die 'incorrect call';
-	TRACE "pushing item(s): ".join(',',(map{$_->to_varbind_string}(@_)));	
+	defined( my $self = shift(@_) ) or die 'incorrect call';
+	### TRACE "pushing item(s): ".join(',',(map{$_->to_varbind_string}(@_)));	
 	push @{$self->varbinds},(@_);
+	
+	### TRACE "indexing fulloid(s) ".join(',',(map{$_->numeric}(@_)));
+	map { $self->_fulloid_index->{$_->numeric} = $_ } (@_);
+	map { push @{$self->_instance_index->{$_->get_instance_oid->numeric}},$_ if $_->has_instance} (@_);
+	map { push @{$self->_label_index->{$_->get_label}},$_ if $_->has_label} (@_);
 
 }
 
@@ -213,6 +236,7 @@ sub match_callback {
 	defined(my $match_sub_ref = shift(@_)) or croak 'Missing match_sub_ref argument';
 	my @matchlist = (@_);
 	confess "Please do not supply empty matchlists in your filters -- completely pointless" unless @matchlist;
+	#TRACE 'matchlist is '.join(',',@matchlist);
 	return sub {		
 		for my $match_item (@matchlist) {
 			if ($match_sub_ref->($_,$match_item)) {
@@ -229,14 +253,49 @@ sub match_callback {
 }
 
 
+###sub filter_label {
+###	defined(my $self = shift(@_)) or croak 'Incorrect call';
+###	return $self->filter(match_callback(\&match_label,construct_matchlist(@_)));
+###}
 sub filter_label {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
-	return $self->filter(match_callback(\&match_label,construct_matchlist(@_)));
+	my @labels = map { $_->get_label if $_->has_label} construct_matchlist(@_);
+	#TRACE "matchlist is ",join(',',@labels);
+	my $ret = SNMP::Class::ResultSet->new;
+	map { $ret->push(@{$self->_label_index->{$_->get_label}}) if $_->has_label } construct_matchlist(@_);
+	return $ret->smart_return;
 }
+###sub filter_instance {
+###	defined(my $self = shift(@_)) or croak 'Incorrect call';
+###	return $self->filter(match_callback(\&match_instance,construct_matchlist(@_)));
+###}
+
 sub filter_instance {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
-	return $self->filter(match_callback(\&match_instance,construct_matchlist(@_)));
+	my @instances = map { $_->numeric } construct_matchlist(@_);
+	DEBUG "matchlist is ",join(',',@instances);
+	my $ret = SNMP::Class::ResultSet->new;
+	map { $ret->push(@{$self->_instance_index->{$_->numeric}}) } construct_matchlist(@_);
+	return $ret->smart_return;
 }
+
+
+#what is the difference from the filter_instance method? 
+#the difference is that hare the arguments are full blown oids
+#instead of bare instances. So, this method check that each of its
+#arguments actually *has* an instance and then takes care to extract
+#it from the oid
+#example: $result_set->filter_instance_from_full('ifDescr.25') 
+#will filter the contents of result_set that have their instance equal to .25
+sub filter_instance_from_full {
+	defined(my $self = shift(@_)) or croak 'Incorrect call';
+	my @instances = map { $_->get_instance_oid->numeric if ($_->has_instance) } construct_matchlist(@_);
+	DEBUG "matchlist is ",join(',',@instances);
+	my $ret = SNMP::Class::ResultSet->new;
+	map { $ret->push(@{$self->_instance_index->{$_}}) } @instances;
+	return $ret->smart_return;
+}
+
 sub filter_fulloid {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
 	return $self->filter(match_callback(\&match_fulloid,construct_matchlist(@_)));
@@ -269,7 +328,7 @@ sub filter {
 	my $ret_set = SNMP::Class::ResultSet->new;
 	map { $ret_set->push($_); } ( grep { &$coderef; } @{$self->varbinds} );
 	
-	$ret_set->smart_return;
+	return $ret_set->smart_return;
 }
 
 =head2 find
@@ -294,7 +353,6 @@ sub find {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
 
 	my @matchlist = ();
-	###print Dumper(@_);
 	
 	while(1) {
 		my $object = shift(@_);
@@ -302,13 +360,16 @@ sub find {
 		my $value = shift(@_);
 		last unless defined($value);
 		DEBUG "Searching for instances with $object == $value";
-		CORE::push @matchlist,(@{$self->filter_label($object)->filter_value($value)});
+		#TRACE Dumper($self->filter_label($object));
+		my @to_return = ( $self->filter_label($object)->filter_value($value) ); #force list context
+		CORE::push @matchlist,(@to_return);
 	}
+	#TRACE 'matchlist:' . Dumper(@matchlist);
 	
 	#be careful. The matchlist which we have may very well be empty! 
 	#we should not be filtering against an empty matchlist
 	#note that the filter_instance will croak in such a case.
-	return $self->filter_instance(@matchlist);
+	return $self->filter_instance_from_full(@matchlist);
 }
 
 

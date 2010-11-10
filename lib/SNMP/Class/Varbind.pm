@@ -14,6 +14,7 @@ use SNMP::Class::Varbind::SysUpTime;
 use SNMP::Class::Varbind::Enum;
 use SNMP::Class::Varbind::Hex_Generic;
 use SNMP::Class::Varbind::MacAddress;
+use SNMP::Class::Varbind::BridgeId;
 
 my $have_time_hires;
 eval { require Time::HiRes };
@@ -98,11 +99,12 @@ sub BUILD {
 		no strict 'refs';
 		&{"${plugin}::adopt"}($self);
 	}
+
 	#in the following trace, DO NOT use to_varbind_string. Why? 
 	#Because, it will try to query the value of the $self variable
 	#BUT we are not sure that the variable, which is an SNMP::Class::Varbind
 	#has a value yet. @@TODO maybe a better fix later for this issue
-	TRACE $self->to_string." created. Available methods:".join(',',$self->meta->get_method_list)."\n";
+	#TRACE $self->to_string." created. Available methods:".join(',',$self->meta->get_method_list)."\n";
 };
 
 sub no_such_object {

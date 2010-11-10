@@ -23,10 +23,11 @@ has 'version' => (
 #);
 
 has 'sysname' => (
-	is => 'rw',
+	is => 'ro',
 	isa => 'Str',
 	required => 0,
 	init_arg => undef,
+	writer => '_set_sysname',
 );
 
 has 'engine_id' => (
@@ -63,6 +64,7 @@ sub create_session {
 		}
 
 		DEBUG $self->hostname.':sysname='.$sysname->value;
+		$self->_set_sysname( $sysname->value );
 
 		#let us also get the engine id
 		if($self->version > 1) {

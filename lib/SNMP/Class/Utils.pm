@@ -78,7 +78,7 @@ sub enums_of {
 	my $oid_name = shift(@_) or croak "Incorrect call to enums_of";
 	my $enum = SNMP::Class::Utils::get_attr($oid_name,"enums");
 	if(%{$enum}) {
-		$logger->debug("$oid_name is an enumerated type");
+		TRACE "$oid_name is an enumerated type";
 		my %reverse = map { $enum->{$_} => $_ } (keys %{$enum});
 		return \%reverse;
 	}

@@ -159,11 +159,16 @@ sub BUILDARGS {
 
 
 sub BUILD {
+		### WARNING WARNING WARNING 
+		### MOOSE CAVEAT --
+		### when a role is applied, the object's attributes are reset 
+		### so, do finish applying whatever roles are needed and THEN create_session
+		###
 		SNMP::Class::Role::Implementation::NetSNMP->meta->apply($_[0]);
-		$_[0]->create_session;
-
 		#the session is also a resultset
 		SNMP::Class::Role::ResultSet->meta->apply($_[0]);
+		$_[0]->create_session;
+
 }
 
 sub add {

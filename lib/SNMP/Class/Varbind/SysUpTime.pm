@@ -29,7 +29,7 @@ sub matches {
 sub adopt {
 	if(matches($_[0])) { 
 		__PACKAGE__->meta->apply($_[0]);
-		DEBUG "one of us now";
+		DEBUG __PACKAGE__." adopts the varbind ".$_[0]->get_label;
 	}
 }
 
