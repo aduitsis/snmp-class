@@ -41,7 +41,6 @@ sub parse_display_hint {
 		my ($rep,$len,$disp,$sep,$term) = ($spec =~ /(|\*)(\d+)([xdoat])([^\d\*]|)([^\d\*]|)/);
 		push @{$ret},{spec=>$spec,rep=>$rep,len=>$len,disp=>$disp,sep=>$sep,term=>$term};
 	}
-	print Dumper($ret);
 	return $ret;
 }
 	
@@ -67,23 +66,23 @@ sub render_octet_str_with_display_hint {
 	
 	#part 2 - how many octets do we need? 
 	#'If the repeat indicator is not present, the repeat count is by default 1.'
-	DEBUG 'doing '.$spec->{spec};
+	TRACE 'doing '.$spec->{spec};
 	my $repetitions = 1;
 	if($spec->{rep} eq '*') {
 		defined(my $byte = shift @{$octets}) or confess 'no more bytes left on string';
 		$repetitions = ord $byte; #an unsigned integer which may be zero
 	}
-	DEBUG "doing $repetitions repetitions";
+	TRACE "doing $repetitions repetitions";
 	my @str;#empty array to push the results from each application of the current pattern
 	for my $i (1..$repetitions) { #if the repetitions is 0, the range operator will return the empty list
-		DEBUG "doing rep $i";
+		TRACE "doing rep $i";
 		#part 3 - apply the specification	
 		my $bytes = '';
 		my @bytes;
 		for my $j (1..$spec->{len}) {
 			my $byte = shift @{$octets};
 			last unless defined($byte);#when there are no more items left in the octets array, we will get undef
-			DEBUG 'Got character '.ord($byte);
+			TRACE 'Got character '.ord($byte);
 			push @bytes,(ord $byte); #since we were shifting from octets, we will be pushing to bytes to maintain the order
 		}
 		#part 4 - render the bytes using the disp
@@ -96,7 +95,7 @@ sub render_octet_str_with_display_hint {
 			my $s = unpack('N',pack('C4',@bytes)); 
 			my $format = ($spec->{disp} eq 'x')? '%x' : ($spec->{disp} eq 'd')? '%d' : '%o';
 			$s = sprintf($format,$s); #to weed out any remaining zeros in front
-			DEBUG "value is $s";
+			TRACE "value is $s";
 			push @str,$s;
 		} 
 		elsif($spec->{disp} eq 'a') {
@@ -112,7 +111,7 @@ sub render_octet_str_with_display_hint {
 		
 	}
 	my $str = join($spec->{sep},@str);
-	DEBUG "str is $str";
+	TRACE "str is $str";
 	if(@{$octets}) { #if we have more items in the array, we may as well use the separator and/or terminator
 		my $append = ($spec->{term} ne '')? $spec->{term} : ($spec->{sep} ne '')? $spec->{sep} : '';
 		return $str.$append.render_octet_str_with_display_hint($specs,$octets);
