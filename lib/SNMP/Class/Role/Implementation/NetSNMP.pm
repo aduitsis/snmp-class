@@ -74,7 +74,7 @@ sub snmpbulkwalk {
 
 	#create the varbind
 	my $vb = SNMP::Class::Varbind->new(oid=>$oid);
-	confess "vb is not an SNMP::Class::Varbind" unless (ref $vb eq 'SNMP::Class::Varbind');
+	confess 'vb is not an SNMP::Class::Varbind' unless $vb->isa('SNMP::Class::Varbind');
 
 	#create the bag
 	my $ret = SNMP::Class::ResultSet->new;

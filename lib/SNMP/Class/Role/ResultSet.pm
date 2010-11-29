@@ -88,10 +88,10 @@ sub smart_return {
 	defined(my $context = wantarray) or croak "ResultSet used in null context";
 	$logger->logconfess('Empty resultset detected') if $_[0]->is_empty; #just making sure than an empty resultset will not come up
 	if ($context) { #list context
-		DEBUG 'List context detected';
+		DEBUG 'List context detected, probably some while loop';
 		return @{$_[0]->varbinds};
 	}
-	DEBUG 'Scalar context detected';
+	####TRACE 'Scalar context detected';
 	return $_[0];
 }
 
@@ -106,7 +106,7 @@ Returns a string representation of the entire ResultSet. Mainly used for debuggi
 =cut
 
 sub dump  {
-	return join("\n",($_[0]->map(sub {$_->dump})));
+	return "resultset dump \n".join("\n",($_[0]->map(sub {$_->dump})))."\n---------------\n";
 }
 
 =head2 push
@@ -499,16 +499,22 @@ our $AUTOLOAD;
 
 sub AUTOLOAD {
 	defined(my $self = shift(@_)) or confess("Incorrect call to AUTOMETHOD");
-	DEBUG $AUTOLOAD;
+	####DEBUG $AUTOLOAD;
 
 	my ($subname) = ($AUTOLOAD =~ /::(\w+)$/);   # Requested subroutine name is passed via $_;
 	
 	DEBUG "method $subname called";
 
+	####DEBUG 'number of items is '.$self->number_of_items;
+	#####DEBUG 'xxx '.Dumper($self->varbinds->[0]->meta->find_all_methods_by_name($subname));
+	####DEBUG $self->dump;
+
+
+
 	#first: if the resultset has only one item and that item has the requested method, call that method
-	if( ($self->number_of_items == 1) && ($self->varbinds->[0]->meta->has_method($subname)) ) {
+	if( ($self->number_of_items == 1) && ($self->varbinds->[0]->meta->find_all_methods_by_name($subname)) ) {
 		DEBUG $self->varbinds->[0]->to_varbind_string." actually has the $subname method";	
-		$self->item_method($subname,@_);
+		return $self->item_method($subname,@_);
 	}
 	elsif (SNMP::Class::Utils::is_valid_oid($subname)) {
 		$logger->debug("ResultSet: $subname seems like a valid OID ");	
@@ -516,6 +522,7 @@ sub AUTOLOAD {
 		return $self->filter_label($subname);
 
 	}
+	$logger->logconfess("I cannot match $subname with anything");
 	#elsif (SNMP::Class::Varbind->can($subname)) {
 	#	DEBUG "$subname method call was refering to the contained varbind. Will delegate to the first item. Resultset is ".$self->dump;
 	#	return $self->item_method($subname,@_);

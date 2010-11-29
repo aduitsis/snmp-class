@@ -15,6 +15,8 @@ use SNMP::Class::Varbind::Enum;
 use SNMP::Class::Varbind::Hex_Generic;
 use SNMP::Class::Varbind::MacAddress;
 use SNMP::Class::Varbind::BridgeId;
+use SNMP::Class::Varbind::DisplayHint;
+#use SNMP::Class::Varbind::IpAddress;
 
 my $have_time_hires;
 eval { require Time::HiRes };

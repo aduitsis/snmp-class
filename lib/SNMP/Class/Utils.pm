@@ -130,14 +130,14 @@ sub descendants_of {
 }
 
 sub is_valid_oid {
-	my $str = shift(@_);
-        eval { get_attr($str,"objectID") };
-        if($@) {
-                $logger->debug("$str doesn't seem like a valid OID. Returning undef...");
-                return;
+        if( defined(get_attr($_[0],'ObjectID')) ) {
+		$logger->debug($_[0].' seems like a valid OID ');
+                return 1;
         }
-	$logger->debug("$str seems like a valid OID ");
-	return 1;
+	else {
+                $logger->debug($_[0].' doesn\'t seem like a valid OID. Returning undef...');
+		return;
+	}
 }
 
 sub convert_to_netsnmp_oid {

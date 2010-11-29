@@ -26,7 +26,7 @@ my $v1 = SNMP::Class::Varbind->new(oid=>SNMP::Class::OID->new('.1.2.3.4'),type=>
 ok($v1->numeric eq '.1.2.3.4',"OID behavior");
 
 my $v2 = SNMP::Class::Varbind->new(oid=>".1.2.3.4.5.1.2.3",type=>'INTEGER');
-my $v3 = SNMP::Class::Varbind->new(oid=>SNMP::Class::OID->new('ifDescr.14'),value=>"ethernet0",type=>"OCTET_STRING");
+my $v3 = SNMP::Class::Varbind->new(oid=>SNMP::Class::OID->new('ifDescr.14'),value=>"ethernet0",type=>"OCTETSTR");
 my $v5 = SNMP::Class::Varbind->new(oid=>"ipAdEntAddr.1.2.3.4",value=>"192.168.1.1",type=>'IPADDR');
 my $v6 = SNMP::Class::Varbind->new(oid=>"sysUpTime.0", value=>"1111", type=>'TIMETICKS');
 isa_ok($v1,"SNMP::Class::Varbind");
@@ -40,7 +40,7 @@ isa_ok($v6,"SNMP::Class::Varbind");
 ok($v3->generate_netsnmpvarbind->isa("SNMP::Varbind"),"generate_varbind check");
 
 
-ok($v3->to_varbind_string eq "ifDescr.14=ethernet0","to_string method");
+is($v3->to_varbind_string,"ifDescr.14=ethernet0","to_string method");
 
 
 
