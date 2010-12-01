@@ -289,6 +289,33 @@ sub filter_label {
 ###	return $self->filter(match_callback(\&match_instance,construct_matchlist(@_)));
 ###}
 
+
+=head 2 contains_label
+
+Used to check whether the ResultSet contains at least one item under the label which corresponds to the fist argument of the method. Example:
+
+ if($rs->contains_label('ifTable') #checks if $rs has indeed the ifTable
+
+This method works only with labels.
+=cut
+sub contains_label {
+	defined(my $self = shift(@_)) or croak 'Incorrect call';
+	defined(my $oid = shift(@_)) or croak 'Incorrect call';
+	my $to_test = SNMP::Class::OID->new($oid);
+	$logger->logconfess('no label available for argument') if ! $to_test->has_label;
+	#which labels do we have?
+	for my $label ($self->enumerate_labels) {
+		####DEBUG $to_test->get_label_oid->numeric.' '.$label;
+		return 1 if $to_test->get_label_oid->contains($label);
+	}	
+	return;
+}
+
+sub enumerate_labels {
+	return keys %{$_[0]->_label_index};
+}
+		
+
 sub filter_instance {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
 	my @instances = map { $_->numeric } construct_matchlist(@_);
