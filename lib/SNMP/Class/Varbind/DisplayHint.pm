@@ -17,7 +17,14 @@ INIT {
 sub matches {
 	( $_[0]->has_label ) 
 	&& 
-	( defined(SNMP::Class::Utils::get_attr( $_[0]->get_label , 'hint' ))); 
+	defined(SNMP::Class::Utils::get_attr( $_[0]->get_label , 'hint' ))
+	&&
+	(SNMP::Class::Utils::get_attr( $_[0]->get_label , 'hint' ) !~ /^\d+[at]$/) #trivial string
+	&&
+	(SNMP::Class::Utils::get_attr( $_[0]->get_label , 'hint' ) ne 'd'); #trivial number
+	
+	#if the hint is just something like '255a' we don't need to go through all the trouble
+	#of having this module adopt the varbind
 
 	#DEBUG SNMP::Class::Utils::textual_convention_of( $_[0]->get_label );
 	#DEBUG SNMP::Class::Utils::syntax_of( $_[0]->get_label );
@@ -102,7 +109,8 @@ sub render_octet_str_with_display_hint {
 			push @str,pack('C*',@bytes); #just copy @TODO maybe a shortcut in the future to make it faster?
 		}
 		elsif($spec->{disp} eq 't') {
-			WARN 'Warning: UTF8 display-hint type not yet implemented properly';
+			####WARN 'Warning: UTF8 display-hint type not yet implemented properly'; 
+			#### I don't yet know if this works 
 			push @str,pack('U*',@bytes); 
 		}
 		else {
@@ -131,7 +139,7 @@ sub value {
 		####TRACE Dumper(\@octets);
 		return render_octet_str_with_display_hint(parse_display_hint($hint),\@octets);
 	}
-	elsif($_[0]->type eq 'INTEGER') {
+	elsif($_[0]->type eq 'INTEGER32') {
 		return $_[0]->raw_value;
 	}
 	else {

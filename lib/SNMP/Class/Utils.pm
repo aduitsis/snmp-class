@@ -130,7 +130,7 @@ sub descendants_of {
 }
 
 sub is_valid_oid {
-        if( defined(get_attr($_[0],'ObjectID')) ) {
+        if( defined(get_attr($_[0],'objectID')) ) {
 		$logger->debug($_[0].' seems like a valid OID ');
                 return 1;
         }

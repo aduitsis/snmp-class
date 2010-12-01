@@ -86,8 +86,9 @@ In scalar context, this method returns the object itself, while in list context 
 
 sub smart_return {
 	defined(my $context = wantarray) or croak "ResultSet used in null context";
-	$logger->logconfess('Empty resultset detected') if $_[0]->is_empty; #just making sure than an empty resultset will not come up
 	if ($context) { #list context
+		#the check for the empty resultset has been moved here, applying only to the list context
+		$logger->logconfess('Empty resultset detected') if $_[0]->is_empty; #just making sure than an empty resultset will not come up 
 		DEBUG 'List context detected, probably some while loop';
 		return @{$_[0]->varbinds};
 	}
@@ -182,6 +183,7 @@ sub construct_matchlist {
 
 #4 little handly subroutines to use for matching using various ways
 
+#DON"T FORGET THE INDEXED FUNCTION SHORTCUTS WHEN YOU CHANGE THIS METHOD
 sub match_label {
 	my($x,$y) = @_;
 	return unless defined($x->get_label_oid); #make sure the item has a label
@@ -189,9 +191,21 @@ sub match_label {
 	return $x->get_label_oid->oid_is_equal( $y->get_label_oid ); #compare the labels - nothing else
 }
 
+
+#y is what we are looking for
+#x is what we have in our set
+sub match_label_under {
+	my($x,$y) = @_;
+	return unless defined($x->get_label_oid); #make sure the item has a label
+	return unless defined($y->get_label_oid);
+	#####DEBUG $x->get_label_oid->numeric.' '.$y->get_label_oid->numeric.' '.$y->get_label_oid->contains( $x->get_label_oid );
+	return $y->get_label_oid->contains( $x->get_label_oid ); #this way we get everything under what we are looking for
+}
+
 #order of args is important
 # $_[0] is the full oid
 # $_[1] is the instance
+#DON"T FORGET THE INDEXED FUNCTION SHORTCUTS WHEN YOU CHANGE THIS METHOD
 sub match_instance {
 	my($x,$y) = @_;
 	return unless $x->has_instance;
@@ -252,6 +266,11 @@ sub match_callback {
 	};
 }
 
+
+sub filter_label_under {
+	defined(my $self = shift(@_)) or croak 'Incorrect call';
+	return $self->filter(match_callback(\&match_label_under,construct_matchlist(@_)));
+}
 
 ###sub filter_label {
 ###	defined(my $self = shift(@_)) or croak 'Incorrect call';
@@ -522,7 +541,8 @@ sub AUTOLOAD {
 		return $self->filter_label($subname);
 
 	}
-	$logger->logconfess("I cannot match $subname with anything");
+	$logger->logconfess('Empty resultset') if $self->is_empty;
+	$logger->logconfess("I cannot match $subname with anything.");
 	#elsif (SNMP::Class::Varbind->can($subname)) {
 	#	DEBUG "$subname method call was refering to the contained varbind. Will delegate to the first item. Resultset is ".$self->dump;
 	#	return $self->item_method($subname,@_);
