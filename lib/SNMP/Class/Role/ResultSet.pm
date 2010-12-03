@@ -269,7 +269,21 @@ sub match_callback {
 
 sub filter_label_under {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
-	return $self->filter(match_callback(\&match_label_under,construct_matchlist(@_)));
+	
+	#this is slow for big sets
+	###return $self->filter(match_callback(\&match_label_under,construct_matchlist(@_)));
+
+	#maybe this will go a little faster
+	my $ret = SNMP::Class::ResultSet->new;
+	for my $to_match (construct_matchlist(@_)) { #as much iterations as the arguments of this method
+		for my $label ($self->enumerate_labels) { #how many labels do we have
+			if (match_label_under(SNMP::Class::OID->new($label),$to_match)) {
+				####DEBUG "$label is under ".$to_match->get_label;
+				$ret->push(@{$self->_label_index->{$label}});
+			}
+		}
+	}
+	return $ret->smart_return;
 }
 
 ###sub filter_label {
@@ -278,8 +292,10 @@ sub filter_label_under {
 ###}
 sub filter_label {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
-	my @labels = map { $_->get_label if $_->has_label} construct_matchlist(@_);
+
+	#my @labels = map { $_->get_label if $_->has_label} construct_matchlist(@_);
 	#TRACE "matchlist is ",join(',',@labels);
+
 	my $ret = SNMP::Class::ResultSet->new;
 	map { $ret->push(@{$self->_label_index->{$_->get_label}}) if $_->has_label } construct_matchlist(@_);
 	return $ret->smart_return;
@@ -303,6 +319,10 @@ sub contains_label {
 	defined(my $oid = shift(@_)) or croak 'Incorrect call';
 	my $to_test = SNMP::Class::OID->new($oid);
 	$logger->logconfess('no label available for argument') if ! $to_test->has_label;
+
+	#shortcut, will return 1 very fast is there is an exact key available
+	return 1 if exists $self->_label_index->{$oid};
+
 	#which labels do we have?
 	for my $label ($self->enumerate_labels) {
 		####DEBUG $to_test->get_label_oid->numeric.' '.$label;

@@ -17,6 +17,8 @@ INIT {
 sub matches {
 	( $_[0]->has_label ) && (
 		( $_[0]->get_label eq 'snmpEngineID')
+		||
+		($_[0]->get_label eq 'dot1dStpPortDesignatedPort')
 	);
 	#DEBUG SNMP::Class::Utils::textual_convention_of( $_[0]->get_label );
 	#DEBUG SNMP::Class::Utils::syntax_of( $_[0]->get_label );
