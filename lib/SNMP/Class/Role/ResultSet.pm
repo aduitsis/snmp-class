@@ -37,11 +37,13 @@ use Data::Dumper;
 use Log::Log4perl qw(:easy);
 my $logger = get_logger();
 
-use overload 
-	'@{}' => \&varbinds,
-	'.' => \&dot,
-	'+' => \&plus,
-	fallback => 1;
+# deactivated because the . could cause strange side effects when accidentally trying to print 
+# a ResultSet . The error message produced is not informative at all
+#use overload 
+#	'@{}' => \&varbinds,
+#	'.' => \&dot,
+#	'+' => \&plus,
+#	fallback => 1;
 
 
 subtype 'ArrayRefofVarbinds' => as 'ArrayRef[SNMP::Class::Varbind]';
@@ -123,6 +125,7 @@ sub push {
 	defined( my $self = shift(@_) ) or die 'incorrect call';
 	### TRACE "pushing item(s): ".join(',',(map{$_->to_varbind_string}(@_)));	
 	push @{$self->varbinds},(@_);
+
 	
 	### TRACE "indexing fulloid(s) ".join(',',(map{$_->numeric}(@_)));
 	map { $self->_fulloid_index->{$_->numeric} = $_ } (@_);
@@ -300,6 +303,7 @@ sub filter_label {
 	map { $ret->push(@{$self->_label_index->{$_->get_label}}) if $_->has_label } construct_matchlist(@_);
 	return $ret->smart_return;
 }
+
 ###sub filter_instance {
 ###	defined(my $self = shift(@_)) or croak 'Incorrect call';
 ###	return $self->filter(match_callback(\&match_instance,construct_matchlist(@_)));
@@ -459,6 +463,22 @@ sub is_empty {
 	return ($_[0]->number_of_items == 0);
 }
 
+sub exact {
+	defined(my $self = shift(@_)) or croak 'incorrect call';
+	defined(my $label = shift(@_)) or croak 'incorrect call';
+	defined(my $instance = shift(@_)) or croak 'incorrect call';
+	
+	my $numeric = SNMP::Class::OID->new($label)->add($instance)->numeric;
+	DEBUG $numeric.' was requested';
+	if(exists $self->_fulloid_index->{$numeric}) {
+		return $self->_fulloid_index->{$numeric};
+	}
+	$logger->logconfess("Sorry! Cannot find $numeric inside the resultset");
+}
+
+sub has_exact {
+	return exists $_[0]->_fulloid_index->{SNMP::Class::OID->new($_[1])->add($_[2])->numeric};
+}
 
 =head2 dot
 
@@ -566,6 +586,7 @@ our $AUTOLOAD;
 sub AUTOLOAD {
 	defined(my $self = shift(@_)) or confess("Incorrect call to AUTOMETHOD");
 	####DEBUG $AUTOLOAD;
+	$logger->logconfess('Empty resultset') if $self->is_empty;
 
 	my ($subname) = ($AUTOLOAD =~ /::(\w+)$/);   # Requested subroutine name is passed via $_;
 	
@@ -583,12 +604,15 @@ sub AUTOLOAD {
 		return $self->item_method($subname,@_);
 	}
 	elsif (SNMP::Class::Utils::is_valid_oid($subname)) {
-		$logger->debug("ResultSet: $subname seems like a valid OID ");	
-		DEBUG "Returning the resultset";
+		DEBUG "$subname is a label, returning filter_label($subname)";	
+		#if we have more arguments, someone requests an exact instance
+		if(defined(my $instance = shift(@_))) {
+			DEBUG 'special invocation, instance was requested';
+			return $self->exact($subname,$instance);
+		}
 		return $self->filter_label($subname);
 
 	}
-	$logger->logconfess('Empty resultset') if $self->is_empty;
 	$logger->logconfess("I cannot match $subname with anything.");
 	#elsif (SNMP::Class::Varbind->can($subname)) {
 	#	DEBUG "$subname method call was refering to the contained varbind. Will delegate to the first item. Resultset is ".$self->dump;

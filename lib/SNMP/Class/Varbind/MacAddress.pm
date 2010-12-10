@@ -5,8 +5,6 @@ use Carp;
 use Data::Dumper;
 use Log::Log4perl qw(:easy);
 
-
-	
 #we have to call the register_callback function in the INIT block to make sure
 #that the SNMP::Class::Varbind module is actually loaded
 INIT {
@@ -30,7 +28,7 @@ sub matches {
 sub adopt {
 	if(matches($_[0])) { 
 		__PACKAGE__->meta->apply($_[0]);
-		DEBUG "Applying role ".__PACKAGE__." to ".$_[0]->get_label;
+		## TRACE "Applying role ".__PACKAGE__." to ".$_[0]->get_label;
 	}
 }
 

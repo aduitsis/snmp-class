@@ -34,7 +34,7 @@ sub matches {
 sub adopt {
 	if(matches($_[0])) { 
 		__PACKAGE__->meta->apply($_[0]);
-		DEBUG "Applying role ".__PACKAGE__." to ".$_[0]->get_label;
+		#### TRACE "Applying role ".__PACKAGE__." to ".$_[0]->get_label;
 	}
 }
 
