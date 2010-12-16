@@ -480,6 +480,10 @@ sub has_exact {
 	return exists $_[0]->_fulloid_index->{SNMP::Class::OID->new($_[1])->add($_[2])->numeric};
 }
 
+sub has_numeric {
+	return exists $_[0]->_fulloid_index->{$_[1]};
+}
+
 =head2 dot
 
 The dot method overloads the '.' operator, returns L<SNMP::Class::Varbind>. Use it to get a single L<SNMP::Class::Varbind> out of a ResultSet as a final instance filter. For example, if $rs contains ifSpeed.1, ifSpeed.2 and ifSpeed.3, then this call: 

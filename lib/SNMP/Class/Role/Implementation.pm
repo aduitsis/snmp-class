@@ -35,7 +35,7 @@ has 'engine_id' => (
 	isa => 'Maybe[Str]',
 	required => 0,
 	init_arg => undef,
-	default => undef,
+	default => '',
 	writer => '_set_engine_id',
 );
 
@@ -74,7 +74,7 @@ sub create_session {
 				$self->_set_engine_id( $id->value );
 			};
 			if($@) {
-				DEBUG 'Agent '.$self->hostname.'  does not have an engine id: '.$@;
+				WARN 'Agent '.$self->hostname.'  does not have an engine id: '.$@;
 			}
 		}
 
@@ -132,8 +132,18 @@ sub walk {
 		}
 
 		#make sure that we got a different oid than in the previous iteration
-		if($previous->oid_is_equal( $returned_vb )) { 
-			confess "OID not increasing at ".$returned_vb->to_varbind_string." (".$returned_vb->numeric.")\n";
+		#maybe after the looping detection was added bellow this is not necessary
+		#TODO: review again
+		###if($previous->oid_is_equal( $returned_vb )) { 
+		###	confess "OID not increasing at ".$returned_vb->to_varbind_string." (".$returned_vb->numeric.")\n";
+		###}
+
+		#make sure we are not looping. Some stupid agents can go on looping forever. 
+		#we are using the numeric method as this will incur only a fast operation in the implementation of ResultSet
+		#TODO: review again 
+		if( $ret->has_numeric($returned_vb->numeric) ) {
+			WARN 'This agent has a serious bug. It keeps looping back to '.$returned_vb->numeric;
+			last LOOP;
 		}
 
 		#make sure we are still under the original $oid -- if not we are finished
@@ -141,6 +151,7 @@ sub walk {
 			DEBUG $oid->to_string." does not contain ".$returned_vb->to_varbind_string." ... we should stop";
 			last LOOP;
 		}
+
 
 		$ret->push($returned_vb);
 
