@@ -571,6 +571,7 @@ sub append {
 	return;
 }
 
+#it is allowed to call map on an empty resultset
 sub map {
 	defined(my $self = shift(@_)) or croak "Incorrect call";
 	my $func = shift(@_) or croak "missing sub";
