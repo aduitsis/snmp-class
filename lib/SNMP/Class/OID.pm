@@ -69,7 +69,7 @@ coerce 'OID_ArrayRefOfInts'
 has 'oid' => (
 	is => 'ro', #object is immutable
 	isa => 'OID_ArrayRefOfInts', #an OID type is stored inside
-	reader => 'get_oid', #accessor, but I'm not sure it is too useful
+	reader => 'get_oid', #accessor is named get_oid
 	coerce => 1, #if passed a NetSNMP::OID we will convert it
 	required => 1, #this attribute must be supplied
 	
@@ -165,13 +165,13 @@ If an SNMP::Class::OID object is used as an array reference, it will act as an a
 =cut
 
 
-use overload
-	'<=>' => \&oid_compare,
-	'cmp' => \&oid_compare,
-	'.' => \&add,
-	'@{}' => \&to_arrayref,
-	fallback => 1,
-;
+#use overload
+#	'<=>' => \&oid_compare,
+#	'cmp' => \&oid_compare,
+#	'.' => \&add,
+#	'@{}' => \&to_arrayref,
+#	fallback => 1,
+#;
 
 =head2 new
 

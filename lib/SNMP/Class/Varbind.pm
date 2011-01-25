@@ -75,7 +75,7 @@ sub BUILDARGS {
 		croak "new was called with a varbind that was not an SNMP::Varbind." if $@;
 		my $part1 = SNMP::Class::OID->new($varbind->[0]);
 		my $part2 = ((!exists($varbind->[1]))||($varbind->[1] eq ''))? SNMP::Class::OID->new('0.0') : SNMP::Class::OID->new($varbind->[1]);
-		$arg_h{oid} = $part1 . $part2;
+		$arg_h{oid} = $part1->add($part2);
 		croak "Internal error. Argument not an SNMP::Class::OID object!" unless ($arg_h{oid}->isa("SNMP::Class::OID"));
 		
 		#ok the type can have some special meaning...let us check
