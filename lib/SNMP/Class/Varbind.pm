@@ -16,6 +16,7 @@ use SNMP::Class::Varbind::Hex_Generic;
 use SNMP::Class::Varbind::MacAddress;
 use SNMP::Class::Varbind::BridgeId;
 use SNMP::Class::Varbind::DisplayHint;
+use SNMP::Class::Varbind::ObjectId;
 #use SNMP::Class::Varbind::IpAddress;
 
 my $have_time_hires;
@@ -130,10 +131,11 @@ sub to_varbind_string {
 	elsif($_[0]->end_of_mib) {
 		return 'End of MIB';
 	}
-	elsif(defined($_[0]->value)) {
-		return $_[0]->SUPER::to_string.'='.$_[0]->value;
+	elsif(defined(my $value = $_[0]->value)) { #try not call the 'value' method twice, it may be expensive
+		#I've given a name to my pain, and it is Batman. When . is overloaded, this will do something nobody expects
+		return $_[0]->SUPER::to_string.'='.$value;
 	} 
-	else {
+	else { 	 
 		return $_[0]->SUPER::to_string.'=N/A';	
 	}
 }

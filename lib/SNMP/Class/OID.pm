@@ -346,7 +346,8 @@ sub to_number {
 
 This method will create a varbind from its argument and set its value to
 be equal to the value that is returned by the to_number method of this
-object
+object. Example: For OID .1, varbind_from_number(2) will return .2 with 
+value 1
 
 =cut
 

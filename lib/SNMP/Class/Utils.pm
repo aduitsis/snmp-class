@@ -64,8 +64,15 @@ sub has_type {
 	return defined(type_of($_[0]));
 }
 
+sub has_syntax {
+	return defined syntax_of($_[0])
+}
 sub syntax_of {
 	return get_attr(shift,'syntax');
+}
+
+sub access_of {
+	return get_attr(shift,'access');
 }
 
 sub has_enums {
