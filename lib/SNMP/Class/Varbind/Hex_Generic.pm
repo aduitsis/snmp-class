@@ -5,7 +5,12 @@ use Carp;
 use Data::Dumper;
 use Log::Log4perl qw(:easy);
 
-
+has 'hex_value_delimiter' => (
+	is => 'rw',
+	writer => 'set_hex_value_delimiter',
+	default => ' ',
+	isa => 'Str',
+);
 	
 #we have to call the register_callback function in the INIT block to make sure
 #that the SNMP::Class::Varbind module is actually loaded
@@ -29,12 +34,13 @@ sub adopt {
 	if(matches($_[0])) { 
 		#### TRACE "Applying role ".__PACKAGE__." to ".$_[0]->get_label;
 		__PACKAGE__->meta->apply($_[0]);
+		$_[0]->set_hex_value_delimiter(' ');
 	}
 }
 
 sub value {
 	defined($_[0]->raw_value) or confess 'Undefined argument';
-	return join(' ',(unpack '(H2)*',$_[0]->raw_value))
+	return uc join($_[0]->hex_value_delimiter,(unpack '(H2)*',$_[0]->raw_value))
 }
 
 

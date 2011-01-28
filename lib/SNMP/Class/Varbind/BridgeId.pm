@@ -31,12 +31,15 @@ sub adopt {
 	if(matches($_[0])) { 
 		__PACKAGE__->meta->apply($_[0]);
 		TRACE "Applying role ".__PACKAGE__." to ".$_[0]->get_label;
+		
+		SNMP::Class::Varbind::Hex_Generic->meta->apply($_[0]);
+		$_[0]->set_hex_value_delimiter(':');
 	}
 }
 
-sub value {
-	return uc join(':',(unpack '(H2)*',$_[0]->raw_value))
-}
+#sub value {
+#	return uc join(':',(unpack '(H2)*',$_[0]->raw_value))
+#}
 
 sub priority {
 	return unpack 'n',$_[0]->raw_value;
