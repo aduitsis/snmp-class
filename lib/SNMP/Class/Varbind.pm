@@ -132,7 +132,7 @@ sub to_varbind_string {
 	elsif($_[0]->end_of_mib) {
 		return 'End of MIB';
 	}
-	elsif(defined(my $value = $_[0]->value)) { #try not call the 'value' method twice, it may be expensive
+	elsif(defined(my $value = $_[0]->value)) { #try not to call the 'value' method twice, it may be expensive
 		#I've given a name to my pain, and it is Batman. When . is overloaded, this will do something nobody expects
 		return $_[0]->SUPER::to_string.'='.$value;
 	} 
