@@ -17,7 +17,7 @@ sub matches {
 	&& 
 	( SNMP::Class::Utils::has_textual_convention( $_[0]->get_label ) )
 	&& 
-	( SNMP::Class::Utils::textual_convention_of( $_[0]->get_label ) eq 'MacAddress')
+	( grep { $_ eq SNMP::Class::Utils::textual_convention_of( $_[0]->get_label ) } qw(MacAddress PhysAddress) )
 	;
 
 	#DEBUG SNMP::Class::Utils::textual_convention_of( $_[0]->get_label );

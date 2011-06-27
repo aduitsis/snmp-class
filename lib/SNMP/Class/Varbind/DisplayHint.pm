@@ -15,6 +15,7 @@ INIT {
 }
 
 sub matches {
+
 	( $_[0]->has_label ) 
 	&& 
 	defined(SNMP::Class::Utils::get_attr( $_[0]->get_label , 'hint' ))

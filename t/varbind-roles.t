@@ -18,7 +18,7 @@ my $v7 = SNMP::Class::Varbind->new(oid=>"ifPhysAddress.35", value=>"GHIJKL", typ
 isa_ok($v7,"SNMP::Class::Varbind");
 
 meta_ok($v7,'has a meta method');
-does_ok($v7,'SNMP::Class::Varbind::DisplayHint',' does the DisplaHint role');
+does_ok($v7,'SNMP::Class::Varbind::DisplayHint',' does the DisplayHint role');
 
 
 
