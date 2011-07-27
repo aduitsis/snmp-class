@@ -1,12 +1,8 @@
 package SNMP::Class::Role::ResultSet;
 
-=head1 SNMP::Class::ResultSet
+=head1 NAME
 
-SNMP::Class::ResultSet - A set of L<SNMP::Class::Varbind> objects. 
-
-=head1 VERSION
-
-Version 0.12
+SNMP::Class::Role::ResultSet - A set of L<SNMP::Class::Varbind> objects. 
 
 =cut
 
@@ -21,9 +17,6 @@ use version; our $VERSION = qv("0.12");
     
     ...
     
-    #later:
-    my $varbind = $foo->pop;
-    ...
 
 =cut
 
@@ -47,12 +40,12 @@ my $logger = get_logger();
 
 
 subtype 'ArrayRefofVarbinds' => as 'ArrayRef[SNMP::Class::Varbind]';
-
 has 'varbinds' => (
 	isa => 'ArrayRefofVarbinds',
 	is => 'rw',
 	default => sub { [] },
 );
+
 
 has '_fulloid_index' => (
 	isa => 'HashRef[Any]',
@@ -74,15 +67,25 @@ has '_instance_index' => (
 
 =head1 METHODS
 
-B<IMPORTANT NOTICE:> All the methods that are returning a ResultSet will only do so when called in scalar context. They alternatively return the list of varbinds in list context.
+B<IMPORTANT NOTICE:> All the methods that return a ResultSet will 
+only do so when called in scalar context. They return 
+the list of varbinds in list context.
 
-=head2 new
+=over 4
 
-Constructor. Just issue it without arguments. Creates an empty ResultSet. SNMP::Class::Varbind objects can later be stored in there using the push method.
+=item B<new>
 
-=head2 smart_return 
+Constructor. Just issue it without arguments. 
+Creates an empty ResultSet. SNMP::Class::Varbind objects can later 
+be stored in there using the push method.
 
-In scalar context, this method returns the object itself, while in list context returns the list of the varbinds. In null context, it will croak. This method is mainly used for internal purposes. 
+=item B<smart_return>
+
+In scalar context, this method returns the object itself, 
+while in list context returns the list of the varbinds. 
+In null context, it will croak. 
+This method is mainly used for internal purposes. 
+
 
 =cut
 
@@ -98,13 +101,17 @@ sub smart_return {
 	return $_[0];
 }
 
-=head2 varbinds
+=item B<varbinds>
 
-Accessor. Returns a reference to a list containing all the stored varbinds. Modifying the list alters the object.
+Accessor. Returns a reference to a list containing all the stored varbinds. 
+B<WARNING:> Modifying the list alters the object.
 
-=head2 dump
 
-Returns a string representation of the entire ResultSet. Mainly used for debugging purposes. 
+=item B<dump>
+
+Returns a string representation of the entire ResultSet. 
+Can be used for debugging purposes. 
+
 
 =cut
 
@@ -112,12 +119,10 @@ sub dump  {
 	return "resultset dump \n".join("\n",($_[0]->map(sub {$_->dump})))."\n---------------\n";
 }
 
-=head2 push
+=item B<push( $item1 , $item2 , ...)>
 
-Will push arguments to resultset. Arguments must be of type L<SNMP::Class::Varbind> (or descendants of that class). 
-
-Since at this point the internal implementation uses just a regular array, order is preserved. But this may change in 
-the future, so a program should really not depend on that behavior. 
+Will push arguments to resultset. Arguments must be L<SNMP::Class::Varbind>s (or descendants of that class). 
+This method will happily push all the items it is given. 
 
 =cut
 
@@ -125,7 +130,6 @@ sub push {
 	defined( my $self = shift(@_) ) or die 'incorrect call';
 	### TRACE "pushing item(s): ".join(',',(map{$_->to_varbind_string}(@_)));	
 	push @{$self->varbinds},(@_);
-
 	
 	### TRACE "indexing fulloid(s) ".join(',',(map{$_->numeric}(@_)));
 	map { $self->_fulloid_index->{$_->numeric} = $_ } (@_);
@@ -134,7 +138,7 @@ sub push {
 
 }
 
-=head2 pop
+=item B<pop>
 
 Pops a varbind out of the Set. Takes no arguments. Although order is preserved at this point, this behavior is not
 guaranteed, so this method should not be used to pop items in a specific order. 
@@ -143,6 +147,8 @@ guaranteed, so this method should not be used to pop items in a specific order.
 
 sub pop {
 	return pop @{$_[0]->varbinds};
+	#@TODO : Cleanup the indexes as well
+	#
 }
 
 
@@ -161,7 +167,7 @@ sub pop {
 
 #this function (this is not a method) takes an assorted list of SNMP::Class::OIDs, SNMP::Class::ResultSets and even strings
 #and returns a proper list of SNMP::Class::OIDs. Used for internal purposes. Does not appear in the perldoc.
-#Its usefulness is to provide a list to compare items to
+#Its usefulness is to provide a uniform list to compare items to
 sub construct_matchlist {
 	my @matchlist;
 	for my $item (@_) {
@@ -242,13 +248,13 @@ sub match_raw_value {
 }
 
 
-#(this is not a method!)
-#this is the core of the filtering mechanism
-#the match_callback method may be used as an argument to the filter method
-#takes 2 arguments:
-#1)a reference to a comparing subref which returns true or false (see 5 ready match_* subrefs above)
-#2)a list of items to match against. In many cases you should probably pipe multiple items through construct_matchlist to this argument
-#produces a closure that matches $_ against any of those items (grep-style) using the comparing subref
+# (this is not a method!)
+# this is the core of the filtering mechanism
+# the match_callback method may be used as an argument to the filter method
+# takes 2 arguments:
+# 1)a reference to a comparing subref which returns true or false (see 5 ready match_* subrefs above)
+# 2)a list of items to match against. In many cases you should probably pipe multiple items through construct_matchlist to this argument
+# produces a closure that matches $_ against any of those items (grep-style) using the comparing subref
 sub match_callback {
 	defined(my $match_sub_ref = shift(@_)) or croak 'Missing match_sub_ref argument';
 	my @matchlist = (@_);
@@ -269,6 +275,15 @@ sub match_callback {
 	};
 }
 
+=item B<filter_label_under( $oid1 , $oid2 , ... )>
+
+Returns a subset of the ResultSet whose OIDs fall under or are equal to  
+$oid1 or $oid2, etc. Each $oidX can be an L<SNMP::Class::OID> or an L<SNMP::Class::Varbind> 
+or even just a string (example: 'ifDescr') in which case it will be interpreted accordingly. 
+
+
+
+=cut
 
 sub filter_label_under {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
@@ -288,6 +303,13 @@ sub filter_label_under {
 	}
 	return $ret->smart_return;
 }
+
+=item B<filter_label( $oid1 , $oid2 , ... )>
+
+Same as filter_label_under, but does keep only those ResultSet items that have equal OID to the
+method arguments.
+
+=cut
 
 ###sub filter_label {
 ###	defined(my $self = shift(@_)) or croak 'Incorrect call';
@@ -310,13 +332,14 @@ sub filter_label {
 ###}
 
 
-=head 2 contains_label
+=item B<contains_label( $oid )>
 
-Used to check whether the ResultSet contains at least one item under the label which corresponds to the fist argument of the method. Example:
+Used to check whether the ResultSet contains at least one item under the label which 
+has equal label to $oid. Example:
 
  if($rs->contains_label('ifTable') #checks if $rs has indeed the ifTable
 
-This method works only with labels.
+
 =cut
 sub contains_label {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
@@ -335,10 +358,25 @@ sub contains_label {
 	return;
 }
 
+=item B<enumerate_labels>
+
+Returns a list of all the labels present in the resultset. Each label appears exactly once.
+
+=cut
+
 sub enumerate_labels {
 	return keys %{$_[0]->_label_index};
 }
 		
+		
+=item B<filter_instance( $oid1 , $oid2 , ... )>
+
+Returns a subset with only those resultset items that have their instance equal to one of the
+arguments. The $oidX items must be instance parts only, not full OIDs.
+
+Example: $rs->filter_instance('.15'); 
+
+=cut
 
 sub filter_instance {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
@@ -349,9 +387,17 @@ sub filter_instance {
 	return $ret->smart_return;
 }
 
+=item B<filter_instance_from_full( $oid1 , $oid2 , ... )>
+
+Returns a subset with only those resultset items that have their instance equal to one of the
+arguments. The $oidX items must be full OIDs, in contrast with B<filter_instance>.
+
+Example: $rs->filter_instance('.1.3.6.1.2.1.2.2.1.2.15'); #will keep instance 15
+
+=cut
 
 #what is the difference from the filter_instance method? 
-#the difference is that hare the arguments are full blown oids
+#the difference is that here the arguments are full blown oids
 #instead of bare instances. So, this method check that each of its
 #arguments actually *has* an instance and then takes care to extract
 #it from the oid
@@ -366,26 +412,58 @@ sub filter_instance_from_full {
 	return $ret->smart_return;
 }
 
+=item B<filter_fulloid( $oid1 , $oid2 , ... )>
+
+Returns a subset with only those resultset items that have their OIDs exactly equal to one of
+the arguments
+
+=cut
+
 sub filter_fulloid {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
 	return $self->filter(match_callback(\&match_fulloid,construct_matchlist(@_)));
 }
+
+=item B<filter_value( $oid1 , $oid2 , ... )>
+
+Returns a subset with only those resultset items that have their value equal to one of
+the arguments. Do note that to extract the value from each resultset item, the value 
+(B<NOT> the raw_value) method is used.
+
+=cut
+
 sub filter_value {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
 	return $self->filter(match_callback(\&match_value,@_));
 }
+
+=item B<filter_raw_value( $oid1 , $oid2 , ... )>
+
+Returns a subset with only those resultset items that have their value equal to one of
+the arguments. Do note that to extract the value from each resultset item, the raw_value
+method is used.
+
+=cut
+
 sub filter_raw_value {
 	defined(my $self = shift(@_)) or croak 'Incorrect call';
 	return $self->filter(match_callback(\&match_raw_value,@_));
 }
 
-=head2 filter
+=item B<filter( $subref )>
 
-Method filter can be used when there is the need to filter the varbinds inside the resultset using arbitrary rules. Takes one argument, which is a reference to a subroutine which will be doing the filtering. The subroutine must return an appropriate true or false value just like in L<CORE::grep>. The value of each L<SNMP::Class::Varbind> item in the ResultSet gets assigned to the $_ global variable. For example:
+Method filter can be used when there is the need to filter the varbinds inside the resultset 
+using arbitrary rules. Takes one argument, a reference to a subroutine which will be doing 
+the filtering. The subroutine must return an appropriate true or false value just like in
+L<CORE::grep>. The value of each L<SNMP::Class::Varbind> item in the ResultSet gets assigned 
+to the $_ global variable. For example:
 
- print $rs->filter(sub {$_->get_label_oid == 'sysName'});
+ print $rs->filter(sub {$_->get_label_oid == 'sysName'}); 
 
-If used in a scalar context, a reference to a new ResultSet containing the filter results will be returned. If used in a list context, a simple array containing the varbinds of the result will be returned. Please note that in the previous example, the print function always forces list context, so we get what we want.
+If used in a scalar context, a reference to a new ResultSet containing the filter results will be returned. 
+If used in a list context, a simple array containing the varbinds of the result will be returned. 
+Please note that in the previous example, the print function always forces list context, 
+so we get what we want.
 
 =cut
 
@@ -401,21 +479,28 @@ sub filter {
 	return $ret_set->smart_return;
 }
 
-=head2 find
+=item B<<< find( key1 => value1 , key2 => value2 , ... ) >>>
 
 Filters based on key-value pairs that are labels and values. 
 
-This method is probably purpose that inspired SNMP::Class::ResultSet. When using SNMP, a programmer often has to single out the row(s) of a table based on a criterion. For example, let us suppose we want to find the rows of the interfaces table for which the ifDescr of the interface is 'eth0' or 'eth1'. If $rs is the entire resultset containing everything, we should probably do something like:
+When using SNMP, a programmer often has to single out the row(s) of a table based on a criterion. 
+For example, suppose one wants to find the rows of the interfaces table for which the ifDescr of 
+the interface is 'eth0' or 'eth1'. If $rs is the entire resultset containing everything, one should 
+probably do something like:
 
  $rs_new = $rs->find('ifDescr' => 'eth0', ifDescr => 'eth1');
 
-which will find which are the instance oids of the rows that have ifDescr equal to 'eth0' B<or> 'eth1' (if any), and filter using that instances. Anything under those instances is returned, all else is filtered out.
+which will find the instance oids of the rows that have ifDescr equal to 'eth0' B<or> 'eth1' (if any), 
+and filter using that instances. Anything under those instances is returned, all else is filtered out.
 
 This means that to get the ifSpeed of eth0, one can simply issue:
  
  my $speed = $rs->find('ifDescr' => 'eth0')->ifSpeed;
 
-B<WARNING>: This method assumes the programmer is looking for something that actually exists. In the above example, if an ifDescr with that value does not exist, the method will croak. So, if not certain, make sure that you handle that error (e.g. use eval)  
+B<WARNING>: This method assumes the programmer is looking 
+for something that actually exists. In the above example, 
+if an ifDescr with that value does not exist, the method will croak. 
+So, if not certain, make sure that you handle that error (e.g. use eval)  
 
 =cut
   	
@@ -443,9 +528,9 @@ sub find {
 }
 
 
-=head2 number_of_items
+=item B<number_of_items>
 
-Returns the number of items present inside the ResultSet
+Returns the number of items in the ResultSet
 
 =cut
 
@@ -453,15 +538,27 @@ sub number_of_items {
 	return scalar @{$_[0]->varbinds};
 }
 
-=head2 is_empty
+=item B<is_empty>
 
-Reveals whether the ResultSet is empty or not.
+Tells whether the ResultSet is empty or not.
 
 =cut
 
 sub is_empty {
 	return ($_[0]->number_of_items == 0);
 }
+
+=item B<exact( $label , $instance )>
+
+When looking for a specific label and instance combination, this method might render assistance. Example:
+
+$rs->exact('ifDescr','.3');
+
+will return the ifDescr.3 items inside the resultset. One has to make sure that what is being looked for actually
+exists, otherwise the method will croak. Use eval when unsure, or alternatively, check with one of the has_*
+methods. 
+
+=cut
 
 sub exact {
 	defined(my $self = shift(@_)) or croak 'incorrect call';
@@ -476,26 +573,31 @@ sub exact {
 	$logger->logconfess("Sorry! Cannot find $numeric inside the resultset");
 }
 
+=item B<has_exact( $label , $instance )>
+
+Returns true if the resultset contains at least one item with label equal to $label and with instance
+$instance. 
+
+=cut
+
 sub has_exact {
 	return exists $_[0]->_fulloid_index->{SNMP::Class::OID->new($_[1])->add($_[2])->numeric};
 }
+
+=item B<has_numeric( $numeric_oid )>
+
+Returns true if the resultset contains at least one item with its OID equal B<in numeric form> to $numeric_oid. Example:
+
+$rs->has_numeric('.1.3.6.1.2.1.2.2.1.2.15');
+
+=cut
 
 sub has_numeric {
 	return exists $_[0]->_fulloid_index->{$_[1]};
 }
 
-=head2 dot
-
-The dot method overloads the '.' operator, returns L<SNMP::Class::Varbind>. Use it to get a single L<SNMP::Class::Varbind> out of a ResultSet as a final instance filter. For example, if $rs contains ifSpeed.1, ifSpeed.2 and ifSpeed.3, then this call: 
-
- $rs.3 
- 
-returns the ifSpeed.3 L<SNMP::Class::Varbind>.
-
-B<Please note that this method does not return a ResultSet like the instance method, but a Varbind which should be the sole member of the ResultSet having that instance. If the ResultSet has more than one Varbinds with the requested instance and the dot operator is used, a warning will be issued, and only the first matching Varbind will be returned> 
-
-=cut
- 
+# dot method is not used anymore as the overloaded parts have been switched off. Let it
+# stay here for a while
 sub dot {
 	defined(my $self = shift(@_)) or croak "Incorrect call to dot";
 	my $str = shift(@_); #we won't test because it could be false, e.g. ifName.0
@@ -517,9 +619,10 @@ sub dot {
 	return $ret->item(0);
 }
 
-=head2 item
+=item B<item( $index )>
 
-Returns the item of the ResultSet with index same as the first argument. No argument yields the first item (index 0) in the ResultSet.
+Returns the item of the ResultSet with index same as $index. 
+Calling the method with no argument yields the first item (index 0) in the ResultSet.
 
 =cut
  
@@ -546,11 +649,18 @@ sub item_method {
 
 #warning: plus will not protect you from duplicates
 #plus will return a new object
+=item B<plus( $other_resultset )>
+
+Can be used to merge two resultsets. Returs a third resultset which contains all the items
+from both. Duplicates are not checked and will appear if both resultsets contain similar items.
+
+=cut
+
 sub plus {
 	defined(my $self = shift(@_)) or croak "Incorrect call to plus";
 	my $item = shift(@_) or croak "Argument to add(+) missing";
 
-	#check that this object is an SNMP::Class::Varbind
+	#check that this object is an SNMP::Class::ResultSet
 	confess "item to add is not an SNMP::Class::ResultSet!" unless (ref($item)&&(eval $item->isa("SNMP::Class::ResultSet")));
 
 	my $ret = SNMP::Class::ResultSet->new();
@@ -561,7 +671,12 @@ sub plus {
 	return $ret;
 }
 
-#append act on $self
+#append acts on $self
+=item B<append( $other_resultset )>
+
+Same as add, but acts on the object itself. 
+
+=cut
 sub append { 
 	defined(my $self = shift(@_)) or croak "Incorrect call to append";
 	my $item = shift(@_) or croak "Argument to append missing";
@@ -572,6 +687,16 @@ sub append {
 }
 
 #it is allowed to call map on an empty resultset
+=item B<map( $subref )>
+
+Iterates over the items of the resultset, calling subref on each of the items. $subref gets the
+item through the $_ variable. This method returns a list of the return values returned by each 
+invocation of $subref. 
+
+This method works a lot similar to the L<CORE::map> function. For a grep-equivalent, see the B<filter> method.
+
+=cut
+
 sub map {
 	defined(my $self = shift(@_)) or croak "Incorrect call";
 	my $func = shift(@_) or croak "missing sub";
@@ -584,6 +709,54 @@ sub map {
 	}
 	return @result;
 }
+
+=back
+
+=head1 AUTOLOADed methods
+
+=over 4
+
+=item B<label>
+
+A resultset will try to respond to any method matching a name of a known label. For example,
+
+$rs->ifName 
+
+is the same as: 
+
+$rs->filter_label('ifName') 
+
+=item B<label( $instance )>
+
+In addition to the previous case, if there is an argument supplied to the label method, an exact
+item matched from the resultset is returned. For example:
+
+$rs->ifName(2) 
+
+is the same as
+
+$rs->exact('ifname','.2') 
+
+=item B<item method>
+
+When a resultset has only one item, it will respond to methods belonging to the item.
+For example:
+
+$rs->ifName(2)->value 
+
+is the same as
+
+$rs->exact('ifName','2')->item(0)->value
+
+The available methods of the item are determined by using find_all_methods_by_name on the meta 
+of the item. 
+
+B<WARNING> : When using this feature, a warning will be issued when using a resultset with more than one
+items. Furthermore, the module will croak if trying to call a method on an empty resultset.
+
+=back
+
+=cut
 
 
 our $AUTOLOAD;
@@ -638,45 +811,15 @@ Athanasios Douitsis, C<< <aduitsis at cpan.org> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to
-C<bug-snmp-class-resultset at rt.cpan.org>, or through the web interface at
-L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=SNMP::Class>.
-I will be notified, and then you'll automatically be notified of progress on
-your bug as I make changes.
+I would be thankful for any issues reported through L<https://github.com/aduitsis/snmp-class/issues>. 
 
 =head1 SUPPORT
 
-You can find documentation for this module with the perldoc command.
-
-    perldoc SNMP::Class
-
-You can also look for information at:
-
-=over 4
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/SNMP::Class>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/SNMP::Class>
-
-=item * RT: CPAN's request tracker
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=SNMP::Class>
-
-=item * Search CPAN
-
-L<http://search.cpan.org/dist/SNMP::Class>
-
-=back
-
-=head1 ACKNOWLEDGEMENTS
+For the time being, please mail the author directly, or simply file an issue. 
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2007 Athanasios Douitsis, all rights reserved.
+Copyright 2011 Athanasios Douitsis, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

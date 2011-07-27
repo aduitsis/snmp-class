@@ -189,7 +189,7 @@ This module uses the Perl libraries from the Net-SNMP package (L<http://www.net-
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2010 Athanasios Douitsis, all rights reserved.
+Copyright 2010-2011 Athanasios Douitsis, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
