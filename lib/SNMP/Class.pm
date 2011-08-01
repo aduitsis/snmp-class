@@ -130,6 +130,7 @@ sub add {
 	for my $to_walk (@_) {
 		$self->append($self->smart($to_walk));
 	}
+	return $self;
 }
 
 =head1 METHODS
