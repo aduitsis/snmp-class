@@ -19,7 +19,7 @@ my $builder = Module::Build->new(
 	'version'	=> 0,
     },
     recommends => {
-	'Time::HiRes;'	=> 0,
+	'Time::HiRes'	=> 0,
     },
     add_to_cleanup      => [ 'SNMP::Class-*' ],
 );
