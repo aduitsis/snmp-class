@@ -1,0 +1,114 @@
+=head1 The SNMP::Class library
+
+
+by Athanasios Douitsis
+
+
+=head2 Intro
+
+The SNMP::Class is an attempt to create a high level Perl library enabling the programmer to carry out complex network management tasks focused on monitoring-related operations that use SNMP while at the same time automatically taking care of as much as possible of the low level SNMP-specific details. Thus, the main objective of the project is to allow one to focus on the abstract logic of the code and reduce the requirements on esoteric knowledge of the SNMP protocol to the maximum possible extent. 
+This library is built using L<Moose>, with care taken so that the pyramid of functionality can be built and extended as one goes up, enabling more and more complex sets of capabilities to be incorporated into the codebase. Ideally, it should eventually become possible to incorporate functionality spanning other network management protocols besides SNMP in a seamless way. Lastly, it should be noted that SNMP::Class does not try to reinvent the wheel in terms of functionality that is already there in the form of good solid widely used proven  libraries such as Net-SNMP (L<http://www.net-snmp.org/>), but rather wraps around what is already available and uses it as its instrumentation. 
+
+=head2 Usage Example
+
+
+	# make a session with myrouter. 
+	# try to detect SNMP version, use ‘public’ as the community string
+	my $s = SNMP::Class->new(‘myrouter.mydomain’); 
+	
+	# walk the system tree, then the interfaces tree, store results inside session
+	# this is possible because an SNMP::Class object assumes two roles,
+	# a session and a resultset 
+	$s->add(‘system’,‘interfaces’); 
+	
+	# get the speed of the eth0 interface
+	say $s->find(‘ifDescr’ => ‘eth0’ )->ifSpeed->value;
+	
+	# print all the interfaces’ descriptions
+	$s->ifDescr->map(sub { say $_->value } );
+	
+	# print all the ethernet interfaces’ descriptions 
+	$s->ifDescr->map( sub { 
+		say $_->value 
+			if ( $s->ifType($_->get_instance_oid)->value eq ‘ethernet-csmacd’) 
+	} );
+	
+	# the same but in an alternate way
+	$s->ifType->map(sub { 
+		say $s->ifName($_->get_instance_oid)->value
+			if ( $_->value eq ‘ethernet-csmacd’ )  
+	});
+
+=head2 Brief history
+
+The need for the creation of SNMP::Class was conceived while writing network management tools for the Greek Research Network (L<http://www.grnet.gr>) that were built around an SNMP based network management infrastructure. Hitherto, most existing SNMP libraries for Perl provide a somewhat low level interface to SNMP, eventually leading to various requirements on the programmer regarding the knowledge of inner workings of SNMP. This category of such knowledge spans topics such as familiarity with the SMI (structure of management information) and its types, standards-based and vendor specific MIBs, SNMP protocol operations and their differences (for example GETNEXT vs GETBULK), and even arcane topics such as bugs on implementations of agents residing inside routers and switches. The amount of domain specific knowledge required to do work on this area is big enough that the general notion is that a programmer should necessarily have wide network management experience. In many cases, the programmer ends up creating his or her own utility library, incorporating predetermined rituals that carry out more and more complex tasks, increasing the level of abstraction. 
+The SNMP::Class evolved out of this very process, as an attempt to build a more easy to use SNMP library, both for the experienced and the inexperienced programmer. The first incarnation was built as a set of routines (dubbed SNMP::Helper) that were operating on an SNMP object (from the Net-SNMP package SNMP.pm) that was supplied externally. These routines were  then grouped on a class package that initially used blessed hashes and later moved on to Class::Std. This version is the one still available today on CPAN and is considered somewhat simplistic. The current version under development far exceeds the complexity of the former one, is based on Moose and makes use of roles to simulate a more "dynamic" structure of class inheritance. Although in the opinion of the author this version cannot yet be used to its full potential, it is however a very interesting example of how Moose can enable the creation of extensible modular software adapted to a specific problem domain. 
+
+
+
+=head2 Class Hierarchy overview 
+
+=over 4
+
+=item SNMP::Class
+
+Although practically all the bulk of the code of this project used to reside here, in the last revision most major pieces of functionality have moved to separate roles. These roles can be applied to an object of this class giving it the ability to carry out certain types of tasks. At present, an SNMP::Class is both an SNMP::Class::Role::Implementation and an SNMP::Class::Role::ResultSet (see bellow for description of these roles). The programmer can directly create an SNMP::Class object, pointing it to a managed device to start working. Everything else (including complex processing tasks after querying the device) can be accomplished by calling methods on the object itself, leveraging its resultset nature (see SNMP::Class::Role::ResultSet for a more thorough explanation).  
+
+=item SNMP::Class::ResultSet and SNMP::Class::Role::ResultSet
+
+Invariably, the cycle of a program that speaks to managed devices involves the querying of a set of Object-IDs (variables) from a network device agent, the agent responding with the required data (result set) and finally the program trying to organize the returned data and process them in a way that extracts the required piece of information. An SNMP::Class::ResultSet object is what is returned after querying an agent and can be thought of as a set of key-value pairs, where each pair is an SNMP object ID along with its value (values can be strings, integers, etc). 
+
+The SNMP::Class::ResultSet contains methods to access its contents and facilitate its processing by the program logic. Many of these methods return a new SNMP::Class::ResultSet containing a subset of the original contents based on various predefined forms of filtering criteria. Thus, it is possible to start from the original result set and, using consecutive invocations of these methods, to gradually filter the set to the required extent. This form of method chaining offers a very intuitive query interface to SNMP data. 
+
+Functionality to access the result set includes:
+
+A generic filter function that can produce a new SNMP::Class::ResultSet which is a subset of the original object. The returned object is likewise an SNMP::Class::ResultSet and can thus be used for further filtering or processing. 
+Specific filters that can isolate specific variables or variable instances or even columns of SMI tables inside an SNMP::Class::ResultSet, based on predefined criteria. As always, a new SNMP::Class::ResultSet is returned. 
+Autoloaded methods dynamically matching the names of SMI objects. For example, calling $result->IfDescr will return a new SNMP::Class::ResultSet containing only OIDs that are instances of ifDescr. These methods do not offer anything new and actually map to the first two categories, but nevertheless add an interesting piece of syntactic sugar, which at times can reduce clutter and increase legibility. 
+Methods counting the items of an SNMP::Class::ResultSet, indicating whether an SNMP::Class::ResultSet is empty, etc. 
+A map iterator to enumerate over the contents of an SNMP::Class::ResultSet object and execute a user supplied function to all the items.
+
+It could be argued that the SNMP::Class::ResultSet role provides a small domain specific language to query and process SNMP results from network management agents. Actual usage has shown that, albeit this interface requires a certain degree of getting used to, its expressiveness gives in many cases the ability to focus directly on the real problem at hand, doing away with much if the repetitive ritual of extracting the information from the agent response. Plus, the resulting code is immensely more clear and brief, with the obvious advantages that result from that. 
+Lastly, it is noted that the SNMP::Class::ResultSet is a class with practically no functionality of its own, but whose functionality is produced by applying the SNMP::Class::Role::ResultSet. This separation allows to apply the same role to the SNMP::Class, making the session object itself a result set. 
+
+=item SNMP::Class::Role::Implementation
+
+The ability to speak with SNMP agents is now provided by a separate type of role under the SNMP::Class::Role::Implementation role. This role is applied  to an SNMP::Class object at runtime, effectively giving it the ability to speak SNMP with agents using methods such as ‘walk’.  SNMP::Class::Role::Implementation contains the abstract parts of using SNMP, such as loops around getnext operations, type checks and exceptions, etc. This role is similar to an abstract class in C++, with the notable difference that it is not overridden but rather complemented, meaning that in order to be used it must be combined with a role using a specific SNMP implementation, such as SNMP::Class::Role::Implementation::NetSNMP, which provides access to operations such as get, getnext, getbulk, etc, through the Net-SNMP SNMP.pm module. Evidently, everything in this scheme is oblivious to the usage of Net-SNMP expect SNMP::Class::Role::Implementation::NetSNMP itself. The usage of a specific implementation can be detected or even changed at runtime, leading to the possibility to be able to use multiple different SNMP instrumentation libraries. An alternative replacement for SNMP::Class::Role::Implementation::NetSNMP is being contemplated using the pure Perl Net::SNMP module (note the difference between the Net-SNMP open source project that contains SNMP.pm versus the Net::SNMP pure Perl library). 
+
+=item SNMP::Class::OID
+
+The SNMP::Class::OID is a representation of an SNMP OID, for example ‘.1.3.1.1.4.1’. This is a regular class (not a role) and provides methods to create OIDs from various sources, compare OIDs, add OIDs to one another, ascertain whether an OID contains another, convert an OID to a string, etc. 
+
+=item SNMP::Class::Varbind
+
+The SNMP::Class::Varbind is a subclass of SNMP::Class::OID. In addition to being an SNMP::Class::OID, it also has a value along with a type and a timestamp. So, each SNMP::Class::Varbind represents a value of an OID (key) that was returned by an agent at a specific time. Since each OID has a specific meaning (for example, sysUpTime.0 is an integer that represents the uptime of the agent's machine), there are unique characteristics associated with certain classes of varbinds. To express those characteristics, the ability to create and assign roles under the SNMP::Class::Varbind:: namespace is provided. When an SNMP::Class::Varbind gets assigned a value, each role under the SNMP::Class::Varbind:: is asked (via a role method) whether it can "adopt" the varbind. When the varbind object is adopted by a role, the role is applied to the object. It is entirely possible that many different roles will adopt the same varbind object, each providing its own set of methods. There are roles to provide functionality depending on SMI type, syntax, textual conventions, enumerations, etc. The SNMP::Class::Varbind::Enumerate for example, returns the enumeration label of the value of an object instead of the it's raw number. Other roles are more specific, applying to specific OIDs only. For example, the SNMP::Class::Varbind::SysUpTime role is applied only to sysUpTime.0 instances and provides a get_absolute_uptime method that calculates the absolute point where the uptime of the agent was reset. Another example is the Hex_Generic role that deals with values that must be represented in hex (such as mac addresses, bridge ids, etc). 
+Experience has shown that, when dealing with network management tools, a great deal of programming effort goes into trying to juggle various types, convert and compare various potentially incompatible representations of values, etc. Thus, there is an evident impedance mismatch between the SNMP SMI realm and the programming language realm. The SNMP::Class::Varbind:: family of roles tries to bridge that gap. It should however be noted that the current set of roles covers a few prominent cases. It is expected that more roles will be added as the library progresses. 
+Lastly, the case of multiple SNMP::Class::Varbind:: roles is explained. Although a more classical approach would be to simply create a hierarchy with multiple inheritance, the chosen scheme allows to dynamically assign as many roles as needed in runtime well after an SNMP::Class::Varbind object has been created. A typical lifecycle for a varbind would be to create it, then assign a value, and only then apply the appropriate roles. 
+
+=back
+
+=head2 Future work
+
+At present, the current version of the library is being used in network management tools created at the National Technical University of Athens (L<http://www.ntua.gr>) NOC. The most recent effort concentrated on making performance improvements as there were serious performance penalties when dealing with result sets of several thousand items. Salient points regarding the current codebase include:
+
+Relative lack of documentation. The paramount importance of comprehensive documentation addressing both the usage of the library and the way to extend cannot be easily understated. 
+The upper layer that allows an SNMP::Class to represent device traits (e.g. a router, a host, a bridge, etc) is currently under consideration. A current prototype is already being used for some experimental network management tasks, but the target of integrating with the underlying class/role hierarchy in a dynamic modular way while at the same time providing an intuitive programming interface that can be easily adapted to one’s individual programming style is not quite reached. This is definitely a work-in-progress point.
+The MIB interface to the SMI tree is a wrapper around the Net-SNMP MIB parser. Given the seriously augmented regular expression capabilities after 5.10, it is contemplated that a built-in parser could be provided as an alternative. 
+The current set of filter methods available to process a result set could certainly be extended, with more functionality. 
+The current set of SNMP::Class::Varbind:: roles is limited. As more special cases are encountered, it is expected that the set will be enriched. 
+Usage by other programmers. This is a point where the library is in square one. Serious interaction with other peoples’ programming style and feedback could be of immense value to the future direction of this project, not to mention its existence. 
+
+
+=head2 Related work
+
+One interested in the subject of SNMP based network management tools and Perl, must before anything else review the XS library that is contained inside the Net-SNMP project (L<SNMP>) and probably is the most mainstream way of using SNMP from within Perl.  The Net-SNMP code can not only speak with managed devices in the usual ways, but also contains a full fledged MIB parser providing access to the SMI tree. This parser is also being used by SNMP::Class through a suitable wrapper. In fact, SNMP::Class uses the SNMP.pm module heavily that it could be very well considered a wrapper around it. 
+Another mainstream module providing access to SNMP functions is the pure Perl L<Net::SNMP> module. At present, SNMP::Class cannot use Net::SNMP instead of SNMP.pm, but an adaptation layer could be created through a suitable SNMP::Class::Implementation:: role that would be using Net::SNMP. In that case, either one of SNMP.pm or Net::SNMP would be sufficient for SNMP::Class to work.  
+Lastly, the SNMP::Info (L<http://snmp-info.sourceforge.net/>) library presents similarities with SNMP::Class in some areas. Anyone wishing to write network management software that speaks SNMP should take a look at this interesting and mature project.
+
+
+=head2 Code
+
+Git repo can be found at L<https://github.com/aduitsis/snmp-class>. Unfortunately, documentation is rather sparse at this point. 
+
+=cut
+
