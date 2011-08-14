@@ -13,16 +13,16 @@ This library is built using L<Moose>, with care taken so that the pyramid of fun
 
 
 	# make a session with myrouter. 
-	# try to detect SNMP version, use ÔpublicÕ as the community string
-	my $s = SNMP::Class->new(Ômyrouter.mydomainÕ); 
+	# try to detect SNMP version, use 'public' as the community string
+	my $s = SNMP::Class->new('myrouter.mydomain'); 
 	
 	# walk the system tree, then the interfaces tree, store results inside session
 	# this is possible because an SNMP::Class object assumes two roles,
 	# a session and a resultset 
-	$s->add(ÔsystemÕ,ÔinterfacesÕ); 
+	$s->add('system','interfaces'); 
 	
 	# get the speed of the eth0 interface
-	say $s->find(ÔifDescrÕ => Ôeth0Õ )->ifSpeed->value;
+	say $s->find('ifDescr' => 'eth0' )->ifSpeed->value;
 	
 	# print all the interfacesÕ descriptions
 	$s->ifDescr->map(sub { say $_->value } );
@@ -30,13 +30,13 @@ This library is built using L<Moose>, with care taken so that the pyramid of fun
 	# print all the ethernet interfacesÕ descriptions 
 	$s->ifDescr->map( sub { 
 		say $_->value 
-			if ( $s->ifType($_->get_instance_oid)->value eq Ôethernet-csmacdÕ) 
+			if ( $s->ifType($_->get_instance_oid)->value eq 'ethernet-csmacd') 
 	} );
 	
 	# the same but in an alternate way
 	$s->ifType->map(sub { 
 		say $s->ifName($_->get_instance_oid)->value
-			if ( $_->value eq Ôethernet-csmacdÕ )  
+			if ( $_->value eq 'ethernet-csmacd' )  
 	});
 
 =head2 Brief history
