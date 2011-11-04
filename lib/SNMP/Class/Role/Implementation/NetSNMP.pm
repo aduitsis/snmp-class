@@ -6,6 +6,8 @@ use SNMP::Class::Role::Implementation;
 use Log::Log4perl qw(:easy);
 my $logger = Log::Log4perl->get_logger();
 
+#please load all the MIBs from the designated directories
+SNMP::loadModules('ALL');
 
 #try to load the SNMP libraries from NetSNMP
 my %have;

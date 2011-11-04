@@ -18,6 +18,7 @@ use SNMP::Class::Varbind::BridgeId;
 use SNMP::Class::Varbind::DisplayHint;
 use SNMP::Class::Varbind::ObjectId;
 use SNMP::Class::Varbind::IpNetToMediaPhysAddress;
+use SNMP::Class::Varbind::CiscoNetworkAddress;
 #use SNMP::Class::Varbind::IpAddress;
 
 my $have_time_hires;
