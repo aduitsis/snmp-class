@@ -80,7 +80,7 @@ sub create_session {
 
 		return $self;#someone might want to use our object directly in the same line with the create_session method
 	}
-	confess "Cannot create a session to ".$self->hostname;		
+	confess "Cannot create a session to ".$self->hostname.' using versions '.join(',',@{$self->possible_versions});		
 }
 
 
