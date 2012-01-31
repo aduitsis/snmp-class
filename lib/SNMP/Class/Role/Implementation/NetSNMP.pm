@@ -37,6 +37,7 @@ sub init {	#no need to use eval here...it is taken care of by the Implementation
 		community => 'Community',
 		hostname => 'DestHost',
 		port => 'RemotePort',
+		timeout => 'Timeout',
 	); #@@@@ don't forget to take care of the rest of the parameters later!!!
 
 	my @params;

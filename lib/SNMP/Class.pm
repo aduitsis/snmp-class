@@ -98,6 +98,12 @@ has 'port' => (
 	default => 161,
 );
 
+has 'timeout' => (
+	is => 'rw', 
+	isa => 'Num',
+	default => 1000000, #microseconds
+);
+
 my (%session,%name,%version,%community,%deactivate_bulkwalks);
 
 

@@ -10,6 +10,7 @@ has 'version' => (
 	isa => 'Num',
 	init_arg => undef,#user must not touch this
 );
+
  
 #this used to be uncommented, but, at some Moose
 #version, using +session in one of the actual implementations
