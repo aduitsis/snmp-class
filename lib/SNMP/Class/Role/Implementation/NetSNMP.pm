@@ -117,7 +117,7 @@ sub snmpgetnext {
 	my $netsnmp_varbind = $vb->generate_netsnmpvarbind;
 	
 	my $value = $self->session->getnext($netsnmp_varbind);
-	die $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
+	die $self->session->{ErrorStr}.' while trying to getnext '.$vb->to_string if ($self->session->{ErrorNum} != 0);
 	
 	return SNMP::Class::Varbind->new(varbind=>$netsnmp_varbind);
 
