@@ -104,6 +104,12 @@ has 'timeout' => (
 	default => 1000000, #microseconds
 );
 
+has 'retries' => (
+	is => 'rw', 
+	isa => 'Num',
+	default => 5, 
+);
+
 my (%session,%name,%version,%community,%deactivate_bulkwalks);
 
 
