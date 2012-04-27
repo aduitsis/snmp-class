@@ -135,6 +135,7 @@ sub render_octet_str_with_display_hint {
 sub value {
 	#### DEBUG 'raw value is '.join('.',unpack('C*',$_[0]->raw_value));
 	my $hint = SNMP::Class::Utils::get_attr( $_[0]->get_label , 'hint' );
+	####WARN 'Label is '.$_[0]->get_label.' type is '.$_[0]->type.' and the hint is '.$hint;
 	if($_[0]->type eq 'OCTETSTR') {
 		my @octets = split('',$_[0]->raw_value);
 		####TRACE Dumper(\@octets);

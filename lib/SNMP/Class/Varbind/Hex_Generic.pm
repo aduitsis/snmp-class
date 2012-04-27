@@ -11,7 +11,14 @@ has 'hex_value_delimiter' => (
 	default => ' ',
 	isa => 'Str',
 );
-	
+
+has 'hex_bytes_per_item' => (
+	is => 'rw',
+	writer => 'set_hex_bytes_per_item',
+	default => 2,
+	isa => 'Num',
+);
+
 #we have to call the register_callback function in the INIT block to make sure
 #that the SNMP::Class::Varbind module is actually loaded
 INIT {
@@ -38,9 +45,21 @@ sub adopt {
 	}
 }
 
+sub hex_generic_upack_spec {
+	return '(H' . $_[0]->hex_bytes_per_item . ')*';
+}
+
+sub hex_generic_array {
+	defined($_[0]->raw_value) or confess 'Undefined raw value';
+	return ( unpack $_[0]->hex_generic_upack_spec , $_[0]->raw_value );
+}
+
+sub hex_generic_value {
+	return uc join($_[0]->hex_value_delimiter,( $_[0]->hex_generic_array ) );
+}
+
 sub value {
-	defined($_[0]->raw_value) or confess 'Undefined argument';
-	return uc join($_[0]->hex_value_delimiter,(unpack '(H2)*',$_[0]->raw_value))
+	return hex_generic_value(@_);
 }
 
 
