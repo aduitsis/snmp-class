@@ -96,7 +96,7 @@ sub snmpbulkwalk {
 	#After all, he probably will have a good sense about how big the is walk he is doing.
 	
 	my ($temp) = $self->session->bulkwalk(0,10,$vb->generate_netsnmpvarbind); #magic number 10 for the time being
-	die $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
+	confess $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
 
 	for my $object (@{$temp}) {
 		my $vb = SNMP::Class::Varbind->new(varbind=>$object);		

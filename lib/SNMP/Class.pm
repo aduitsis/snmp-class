@@ -44,8 +44,9 @@ use SNMP::Class::Utils;
 use SNMP::Class::Role::Implementation::Dummy;
 use SNMP::Class::Role::Implementation::NetSNMP;
 
-#setup logging
+use SNMP::Class::Role::Personality;
 
+#setup logging
 use Log::Log4perl;
 
 # try to find a universal.logger in the same path with this file
@@ -130,10 +131,18 @@ sub BUILD {
 		### when a role is applied, the object's attributes are reset 
 		### so, do finish applying whatever roles are needed and THEN create_session
 		###
+
+		#this object can speak SNMP
 		SNMP::Class::Role::Implementation::NetSNMP->meta->apply($_[0]);
+
 		#the session is also a resultset
 		SNMP::Class::Role::ResultSet->meta->apply($_[0]);
+
+		# also make it a generic personality with facts
+		SNMP::Class::Role::Personality->meta->apply($_[0]);
+
 		$_[0]->create_session;
+
 
 }
 

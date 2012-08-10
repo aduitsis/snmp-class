@@ -27,7 +27,7 @@ has 'sysname' => (
 	is => 'ro',
 	isa => 'Str',
 	required => 0,
-	init_arg => undef,
+	#init_arg => undef, #commented out because each application of a role overwrites the original value if this is undef
 	writer => '_set_sysname',
 );
 
@@ -35,7 +35,7 @@ has 'engine_id' => (
 	is => 'ro',
 	isa => 'Maybe[Str]',
 	required => 0,
-	init_arg => undef,
+	#init_arg => undef, #commented out because each application of a role overwrites the original value if this is undef
 	default => '',
 	writer => '_set_engine_id',
 );
