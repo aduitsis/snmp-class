@@ -9,8 +9,8 @@ use Moose::Util qw/find_meta does_role search_class_by_role/;
 
 use Moose::Role;
 
-our $id = 'SysObjectID';
-our $description = 'can identify its model and vendor';
+our $id = 'Interfaces';
+our $description = 'has interfaces';
 
 our @required_oids = qw(ifIndex ifDescr ifType ifMtu ifSpeed ifPhysAddress ifAdminStatus ifOperStatus ifName ifAlias ipForwarding);
 

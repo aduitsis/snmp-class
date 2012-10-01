@@ -41,8 +41,14 @@ use SNMP::Class::FactSet::Simple;
 use SNMP::Class::Role::Personality::SNMP_Agent;
 use SNMP::Class::Role::Personality::SysObjectID;
 use SNMP::Class::Role::Personality::Interfaces;
-#use SNMP::Class::Role::Personality::EntityPhysical;
+use SNMP::Class::Role::Personality::EntityPhysical;
 use SNMP::Class::Role::Personality::CInetNetToMediaTable;
+use SNMP::Class::Role::Personality::IpNetToMediaPhysAddress;
+use SNMP::Class::Role::Personality::CdpCacheAddress;
+use SNMP::Class::Role::Personality::IpForwarding;
+use SNMP::Class::Role::Personality::Dot1dBridge;
+use SNMP::Class::Role::Personality::PortTable;
+use SNMP::Class::Role::Personality::Dot1dTpFdbAddress;
 
 #import the utility module
 use Moose::Util qw/find_meta does_role search_class_by_role/;
