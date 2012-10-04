@@ -49,6 +49,11 @@ use SNMP::Class::Role::Personality::IpForwarding;
 use SNMP::Class::Role::Personality::Dot1dBridge;
 use SNMP::Class::Role::Personality::PortTable;
 use SNMP::Class::Role::Personality::Dot1dTpFdbAddress;
+use SNMP::Class::Role::Personality::Dot1dStp;
+use SNMP::Class::Role::Personality::IpAdEntAddr;
+use SNMP::Class::Role::Personality::ManagementDomainName;
+use SNMP::Class::Role::Personality::VtpVlanState;
+use SNMP::Class::Role::Personality::VmVlan;
 
 #import the utility module
 use Moose::Util qw/find_meta does_role search_class_by_role/;
