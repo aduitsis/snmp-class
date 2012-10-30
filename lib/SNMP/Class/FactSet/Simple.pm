@@ -50,4 +50,15 @@ sub item {
 	$_[0]->facts->[ $_[1] ]
 }
 
+sub serialize {
+	return freeze( $_[0]->facts ); 
+}
+
+# a function, not a method
+sub unserialize {
+	__PACKAGE__->new( fact_set => thaw( $_[0] ) );
+}
+
+
+
 1;

@@ -46,3 +46,11 @@ $fs1->push( $f1, $f2, $f3 );
 ok( $fs1->grep( sub { $_->type eq 'test1' } ), 'grep method test');
 ok( $fs1->grep( sub { $_->type eq 'test1' } )->item(0)->matches( 'test1' ), 'grep, then item, then match');
 
+
+my $serialized = $fs1->serialize;
+
+my $fs2 = SNMP::Class::FactSet::Simple::unserialize( $serialized );
+
+ok( $fs2->count == 3 , 'serialized factset keeps the same number of items');
+
+
