@@ -1,5 +1,7 @@
 package SNMP::Class::FactSet::Simple;
 
+use Data::Printer;
+
 use warnings;
 use strict;
 
@@ -9,6 +11,8 @@ my $logger = get_logger();
 use Moose;
 use Moose::Util::TypeConstraints;
 use YAML qw(freeze thaw);
+
+use Scalar::Util 'blessed';
 
 with 'SNMP::Class::Role::FactSet';
 
@@ -29,7 +33,9 @@ sub facts {
 sub push { 
 	defined( my $self = shift( @_ ) ) or confess 'incorrect call';
 	for( @_ ) {
-		$logger->logconfess('Cannot push something that is not an SNMP::Class::Fact') unless $_->isa('SNMP::Class::Fact');
+		if( !( blessed $_  && $_->isa('SNMP::Class::Fact') ) ) { 
+			$logger->logconfess('Cannot push something that is not an SNMP::Class::Fact')
+		}
 	}
 	push @{ $self->fact_set	} , @_;
 }

@@ -21,7 +21,6 @@ sub predicate {
 sub get_facts {
 
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';
-
 	# following call returns array of SNMP::Class::Facts
 	$s->cdpCacheAddress->map(sub {
 		if($s->cdpCacheAddressType($_->get_instance_oid)->value eq 'ip') {
@@ -34,12 +33,17 @@ sub get_facts {
 					type => 'ip',
 					address => $ip,
 					interface => $s->get_ifunique($_->get_instance_oid->slice(1)),
+					#device_id => $s->cdpCacheDeviceId( $_->get_instance_oid )->value // '',
+					#device_port => $s->cdpCacheDevicePort( $_->get_instance_oid )->value // '',
 				},
 			);
 
 		}
+		else {
+			# WARN 'Cannot yet handle this type of CDP neighbor: '. $s->cdpCacheAddressType($_->get_instance_oid)->value;
+			return (); # to omit an element from map, we return an empty list
+		}
 	});
-
 }
 
 
