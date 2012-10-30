@@ -1,5 +1,7 @@
 package SNMP::Class::Role::Personality::SysObjectID;
 
+use v5.14;
+
 use Log::Log4perl qw(:easy);
 my $logger = get_logger();
 
@@ -12,6 +14,12 @@ our $description = 'can identify its model and vendor';
 
 our @required_oids = qw(system);
 
+sub vendor {
+	defined( my $self = shift( @_ ) ) or confess 'incorrect call';
+	SNMP::Class::OID->new('.1.3.6.1.4.1')->contains($self->sysObjectID(0)->object_id) ?  
+		$self->sysObjectID(0)->object_id->slice(1..7)->to_string : undef
+}
+
 sub get_facts {
 	defined( my $self = shift( @_ ) ) or confess 'incorrect call';
 
@@ -20,9 +28,8 @@ sub get_facts {
 		engine_id => $self->engine_id,
 		id => $self->sysObjectID(0)->value,
 	);
-	if(SNMP::Class::OID->new('.1.3.6.1.4.1')->contains($self->sysObjectID(0)->object_id)) {
-		$attrs{vendor} = $self->sysObjectID(0)->object_id->slice(1..7)->to_string;
-	}
+	# we call it like that because we're not applied yet as a role
+	$attrs{vendor} = vendor( $self )  // ''; 
 	SNMP::Class::Fact->new(type=>'system',slots=>\%attrs);
 };
 
