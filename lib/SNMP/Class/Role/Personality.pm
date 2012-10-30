@@ -77,8 +77,7 @@ sub register_plugin {
 sub trigger {
 	TRACE 'trigger';
 	no strict 'refs';
-	ROLE_LOOP:
-	for my $role ( @plugins ) {
+	ROLE_LOOP: for my $role ( @plugins ) {
 		if ( ( ! does_role( $_[0] , $role ) ) && &{ $role . '::predicate' }( $_[0] ) ) {
 			DEBUG $role . ' can be applied to object';
 			# ready everything
@@ -106,13 +105,16 @@ sub trigger {
 
 
 sub prime {
-	for ( @plugins ) {
+	my $self = shift // die 'incorrect call';
+	my @personalities_to_prime = (@_)? @_ : @plugins;
+	
+	for ( @personalities_to_prime ) {
 		no strict 'refs';
-		#p @{ $_ . '::required_oids' };
-		$_[0]->add( @{ $_ . '::required_oids' } );
+		###p $_,@{ $_ . '::required_oids' };
+		$self->add( @{ $_ . '::required_oids' } );
 		use strict 'refs';
 	}
-	$_[0]->trigger;
+	$self->trigger;
 }
 
 

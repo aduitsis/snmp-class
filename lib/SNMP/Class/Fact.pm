@@ -67,6 +67,8 @@ sub BUILDARGS {
 	return $class->SUPER::BUILDARGS( type => $_[0] ) if ( @_ == 1 ) ;
 
 	my %args = @_;
+
+	# if there is the 'frozen' key, then the argument is a serialized SNMP::Class::Fact
 	if ( defined( $args{ frozen } ) ) { 
 		return SNMP::Class::Fact::unserialize( $args{ frozen } )
 	} 
