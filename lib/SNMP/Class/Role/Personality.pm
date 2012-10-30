@@ -58,8 +58,6 @@ use SNMP::Class::Role::Personality::VmVlan;
 #import the utility module
 use Moose::Util qw/find_meta does_role search_class_by_role/;
 
-use Data::Printer;
-
 use Moose::Role;
 
 has 'fact_set' => (

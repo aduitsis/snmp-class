@@ -1,7 +1,5 @@
 package SNMP::Class::Role::Personality::ManagementDomainName;
 
-use Data::Printer;
-
 use Log::Log4perl qw(:easy);
 my $logger = get_logger();
 
