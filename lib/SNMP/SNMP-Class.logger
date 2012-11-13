@@ -1,9 +1,28 @@
-log4perl.rootLogger=WARN, Screen
+log4perl.logger = INFO, Screen
+#log4perl.logger.daemon = WARN, LogFile
 
+# standard error
 log4perl.appender.Screen				= Log::Log4perl::Appender::ScreenColoredLevels
 log4perl.appender.Screen.stderr				= 1
 log4perl.appender.Screen.layout				= PatternLayout
 log4perl.appender.Screen.layout.ConversionPattern 	= %R %M:%L %m%n
 ###log4perl.appender.Screen.layout.ConversionPattern 	= %M:%L %m%n
+
+# /var/log/snmp-class/snmp-class.log
+log4perl.appender.LogFile				= Log::Log4perl::Appender::File
+log4perl.appender.LogFile.filename			= /var/log/snmp-class/snmp-class.log
+log4perl.appender.LogFile.mode				= append
+log4perl.appender.LogFile.recreate			= 1
+log4perl.appender.LogFile.recreate_check_interval	= 30 
+log4perl.appender.LogFile.layout			= PatternLayout
+log4perl.appender.LogFile.layout.ConversionPattern 	= %d %M:%L %m%n
+#log4perl.appender.LOGFILE.layout.ConversionPattern 	= %R %M:%L %m%n
+
+# syslog
+log4perl.appender.Syslog				= Log::Dispatch::Syslog
+log4perl.appender.Syslog.ident	 			= snmp-class
+log4perl.appender.Syslog.facility   			= daemon
+log4perl.appender.Syslog.layout     			= PatternLayout
+#log4j.appender.Syslog.ConversionPattern 		= %p: %m%n
 
 
