@@ -78,6 +78,8 @@ sub trigger {
 	ROLE_LOOP: for my $role ( @plugins ) {
 		if ( ( ! does_role( $_[0] , $role ) ) && &{ $role . '::predicate' }( $_[0] ) ) {
 			DEBUG $role . ' can be applied to object';
+			$role->meta->apply( $_[0] );
+			DEBUG $role . ' is now applied to object';
 			# ready everything
 			eval { 
 				$_[0]->fact_set->push( &{ $role . '::get_facts' }( $_[0] ) );
@@ -90,7 +92,6 @@ sub trigger {
 			#now apply role
 			#p $_[0]->engine_id;
 			#p $_[0]->sysname;
-			$role->meta->apply( $_[0] );
 			#p $_[0]->engine_id;
 			#p $_[0]->sysname;
 			goto ROLE_LOOP; # we restart the loop because we applied a new role so

@@ -1,5 +1,7 @@
 package SNMP::Class::Role::Personality::VmVlan;
 
+use Data::Printer; 
+
 use Log::Log4perl qw(:easy);
 my $logger = get_logger();
 
@@ -12,18 +14,27 @@ our $description = 'has vlans (Cisco specific)';
 
 our @required_oids = qw( vmVlan vmVlanType vmPortStatus );
 
+has 'vlans' => ( 
+	is  => 'ro',
+	isa => 'HashRef[Int]',
+	default => sub { {} },
+);
+	
+
 sub get_vlans {
-	my %vlans;
-	for( $_[0]->vmVlan ) {
-		$vlans{ $_->value } = 1;
-	}	
-	return keys %vlans;
+	#my %vlans;
+	#for( $_[0]->vmVlan ) {
+	#	$vlans{ $_->value } = 1;
+	#}	
+	return keys %{ $_[0]->vlans };
 }
 
 sub get_facts {
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';
 	grep { defined $_ } ( $s->vmVlan->map(sub {
+		# a value of vmVlan==0 means the port has no vlan assigned, ie it must be a native port
 		if(($_->value != 0) && $s->has_exact('vmPortStatus',$_->get_instance_oid) && $s->has_exact('vmVlanType',$_->get_instance_oid)) {
+			$s->vlans->{ $_->value } = $s->vmVlanType($_->get_instance_oid)->value;
 			return SNMP::Class::Fact->new(
 				type => 'vlan_port',
 				slots => {
