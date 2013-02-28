@@ -12,6 +12,8 @@ our $description = 'implements Cisco VTP';
 
 our @required_oids = qw( managementDomainName managementDomainLocalMode managementDomainRowStatus managementDomainPruningState managementDomainVersionInUse managementDomainLastUpdater );
 
+our @dependencies = qw(SNMP::Class::Role::Personality::SNMP_Agent);
+
 sub get_facts {
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';
 	$s->managementDomainName->map(sub {

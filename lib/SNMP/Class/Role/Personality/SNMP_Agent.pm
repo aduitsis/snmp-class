@@ -12,6 +12,8 @@ our $description = 'is an SNMP Agent';
 
 our @required_oids = () ; #no oids required for this basic role
 
+our @dependencies = qw();
+
 sub get_facts {
 
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';

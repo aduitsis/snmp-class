@@ -12,6 +12,8 @@ our $description = 'has a Cisco Stack Port table';
 
 our @required_oids = qw( portTable );
 
+our @dependencies = qw(SNMP::Class::Role::Personality::Interfaces);
+
 sub get_facts {
 
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';

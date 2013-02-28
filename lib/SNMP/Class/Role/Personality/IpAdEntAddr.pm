@@ -12,6 +12,8 @@ our $description = 'has IPv4 interfaces';
 
 our @required_oids = qw( ipAddrTable );
 
+our @dependencies = qw(SNMP::Class::Role::Personality::Interfaces);
+
 sub get_facts {
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';
 	$s->ipAdEntAddr->map(sub {

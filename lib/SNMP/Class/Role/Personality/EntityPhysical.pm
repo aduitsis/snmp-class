@@ -10,7 +10,10 @@ use Moose::Role;
 our $id = 'EntityPhysical';
 our $description = 'is a Hardware Entity';
 
+
 our @required_oids = qw(entPhysicalDescr entPhysicalVendorType entPhysicalContainedIn entPhysicalClass entPhysicalParentRelPos entPhysicalName entPhysicalHardwareRev entPhysicalFirmwareRev entPhysicalSoftwareRev entPhysicalSerialNum entPhysicalMfgName entPhysicalModelName entPhysicalAlias entPhysicalAssetID entPhysicalIsFRU); 
+
+our @dependencies = qw(SNMP::Class::Role::Personality::SNMP_Agent);
 
 sub get_facts {
 

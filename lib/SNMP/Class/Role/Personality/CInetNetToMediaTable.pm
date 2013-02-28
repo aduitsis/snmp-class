@@ -12,6 +12,8 @@ our $description = 'has a Cisco ciscoIetfIpMIB cInetNetToMediaTable';
 
 our @required_oids = qw(cInetNetToMediaTable);
 
+our @dependencies = qw(SNMP::Class::Role::Personality::Interfaces);
+
 sub get_facts {
 
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';

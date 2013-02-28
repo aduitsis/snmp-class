@@ -14,6 +14,8 @@ our $description = 'has vlans (Cisco specific)';
 
 our @required_oids = qw( vmVlan vmVlanType vmPortStatus );
 
+our @dependencies = qw(SNMP::Class::Role::Personality::Interfaces);
+
 has 'vlans' => ( 
 	is  => 'ro',
 	isa => 'HashRef[Int]',

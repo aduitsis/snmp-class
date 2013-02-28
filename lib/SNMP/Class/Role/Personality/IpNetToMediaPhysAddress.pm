@@ -12,6 +12,8 @@ our $description = 'has ARP entries';
 
 our @required_oids = qw(ipNetToMediaPhysAddress ipNetToMediaType);
 
+our @dependencies = qw(SNMP::Class::Role::Personality::Interfaces);
+
 sub predicate {
 	does_role($_[0] , 'SNMP::Class::Role::Personality::Interfaces') 
 	&& 

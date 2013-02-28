@@ -14,6 +14,8 @@ our $description = 'can identify its model and vendor';
 
 our @required_oids = qw(system);
 
+our @dependencies = qw(SNMP::Class::Role::Personality::SNMP_Agent);
+
 sub vendor {
 	defined( my $self = shift( @_ ) ) or confess 'incorrect call';
 	SNMP::Class::OID->new('.1.3.6.1.4.1')->contains($self->sysObjectID(0)->object_id) ?  

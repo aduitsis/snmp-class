@@ -12,6 +12,8 @@ our $description = 'has VTP managed vlans (Cisco specific)';
 
 our @required_oids = qw( vtpVlanName vtpVlanState vtpVlanType vtpVlanMtu vtpVlanIfIndex );
 
+our @dependencies = qw(SNMP::Class::Role::Personality::Interfaces SNMP::Class::Role::Personality::ManagementDomainName);
+
 sub get_facts {
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';
 	$s->vtpVlanState->map(sub {

@@ -12,6 +12,8 @@ our $description = 'is an 802.1D bridge';
 
 our @required_oids = qw( dot1dBaseBridgeAddress dot1dBaseType );
 
+our @dependencies = qw(SNMP::Class::Role::Personality::SNMP_Agent);
+
 sub get_facts {
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';
 

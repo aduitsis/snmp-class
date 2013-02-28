@@ -12,6 +12,8 @@ our $description = 'has a transparent bridge fdb';
 
 our @required_oids = qw( dot1dTpFdbAddress dot1dTpFdbPort dot1dTpFdbStatus dot1dBasePortIfIndex );
 
+our @dependencies = qw('SNMP::Class::Role::Personality::Interfaces');
+
 sub get_facts {
 
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';

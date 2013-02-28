@@ -103,13 +103,46 @@ sub trigger {
 }
 
 
+sub calculate_personality_dependencies {
+	my %personalities = map { $_ => 1 } @_;
+	for my $personality ( %personalities ) { 
+		no strict 'refs';
+		my @dependencies = @{ $personality . '::dependencies' } ;
+		use strict 'refs';
+		for my $dependency ( @dependencies ) {
+			if( ! exists( $personalities{ $dependency } ) ) {
+				DEBUG "$personality requires that $dependency is also added";
+				return calculate_personality_dependencies( $dependency , @_ );
+			}
+		}
+	}
+	return @_;
+}
+
 sub prime {
 	my $self = shift // die 'incorrect call';
-	my @personalities_to_prime = (@_)? @_ : @plugins;
+	my @personalities_requested = (@_)? @_ : @plugins;
+
+	#if one is lazy, one will be bored to write SNMP::Class::Role::Personality::
+	#in front of each personality
+	@personalities_requested = map { (/::/)? $_ : __PACKAGE__ . '::'.$_  } @personalities_requested;
 	
-	for ( @personalities_to_prime ) {
+	DEBUG 'Personalities requested: '.join(',',@personalities_requested);
+
+	my @personalities_required = calculate_personality_dependencies( @personalities_requested );
+
+	DEBUG 'Personalities required: '.join(',',@personalities_required);
+
+	for ( @personalities_required ) {
 		no strict 'refs';
+
 		###p $_,@{ $_ . '::required_oids' };
+		if( @{ $_ . '::required_oids' } ) { 
+			DEBUG 'Role '.$_.' says we should get '.join(',',@{ $_ . '::required_oids' }) 
+		}
+		else {
+			DEBUG 'Role '.$_.' does not require us to get anything';
+		}
 		$self->add( @{ $_ . '::required_oids' } );
 		use strict 'refs';
 	}

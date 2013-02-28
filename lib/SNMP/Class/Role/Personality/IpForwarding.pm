@@ -12,6 +12,8 @@ our $description = 'is a router';
 
 our @required_oids = qw( ipForwarding );
 
+our @dependencies = qw(SNMP::Class::Role::Personality::SNMP_Agent);
+
 sub get_facts {
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';
 

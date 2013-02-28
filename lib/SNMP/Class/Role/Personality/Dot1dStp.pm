@@ -12,6 +12,8 @@ our $description = 'implements STP';
 
 our @required_oids = qw( dot1dStp );
 
+our @dependencies = qw(SNMP::Class::Role::Personality::Dot1dTpFdbAddress SNMP::Class::Role::Personality::Interfaces);
+
 sub get_facts {
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';
 	$s->dot1dStpPort->map(sub {

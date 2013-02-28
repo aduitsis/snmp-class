@@ -12,6 +12,8 @@ our $description = 'has interfaces';
 
 our @required_oids = qw(ifIndex ifDescr ifType ifMtu ifSpeed ifPhysAddress ifAdminStatus ifOperStatus ifName ifAlias ipForwarding);
 
+our @dependencies = qw(SNMP::Class::Role::Personality::SNMP_Agent);
+
 sub get_facts {
 
 	defined( my $self = shift( @_ ) ) or confess 'incorrect call';
