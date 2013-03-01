@@ -19,7 +19,14 @@ sub get_facts {
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';
 
 	$s->cInetNetToMediaPhysAddress->map(sub {
-		SNMP::Class::Fact->new(
+		my $instance = $_->get_instance_oid ; 
+		for( qw( cInetNetToMediaPhysAddress cInetNetToMediaType cInetNetToMediaState cInetNetToMediaLastUpdated ) ) {
+			if( ! $s->has_exact( $_ => $instance ) ) {
+				WARN 'missing instance '.$instance->numeric.' for '.$_;
+				return ();
+			}
+		}
+		return SNMP::Class::Fact->new(
 				type => 'ipv6_net_to_media',
 				slots => {
 					system => $s->sysname,
