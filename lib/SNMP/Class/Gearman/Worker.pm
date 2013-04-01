@@ -101,7 +101,7 @@ sub gather {
 
 	# before we call the vendor method, we make sure that the personality supplying it is there
 	if( does_role($s , 'SNMP::Class::Role::Personality::VmVlan' ) && $s->vendor eq 'cisco' ) {
-		my @personalities = qw( SNMP::Class::Role::Personality::SNMP_Agent SNMP::Class::Role::Personality::SysObjectID SNMP::Class::Role::Personality::Dot1Bridge SNMP::Class::Role::Personality::Interfaces SNMP::Class::Role::Personality::Dot1dStp SNMP::Class::Role::Personality::PortTable SNMP::Class::Role::Personality::Dot1dTpFdbAddress);
+		my @personalities = qw( SNMP_Agent SysObjectID Dot1Bridge Interfaces Dot1dStp PortTable Dot1dTpFdbAddress);
 		for( $s->get_vlans ) {
 			my %args = @_;
 			$args{ community } .= '@'.$_;

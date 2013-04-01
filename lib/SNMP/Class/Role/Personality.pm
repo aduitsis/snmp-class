@@ -123,15 +123,17 @@ sub prime {
 	my $self = shift // die 'incorrect call';
 	my @personalities_requested = (@_)? @_ : @plugins;
 
+
 	#if one is lazy, one will be bored to write SNMP::Class::Role::Personality::
 	#in front of each personality
 	@personalities_requested = map { (/::/)? $_ : __PACKAGE__ . '::'.$_  } @personalities_requested;
+
+	DEBUG 'Personalities requested: '.join(' ',map {  ( $_ =~ / ^ SNMP::Class::Role::Personality:: (\S+) $ /x )  } @personalities_requested );
 	
-	DEBUG 'Personalities requested: '.join(',',@personalities_requested);
 
 	my @personalities_required = calculate_personality_dependencies( @personalities_requested );
 
-	DEBUG 'Personalities required: '.join(',',@personalities_required);
+	DEBUG 'Personalities required: '.join(' ',map {  ( $_ =~ / ^ SNMP::Class::Role::Personality:: (\S+) $ /x )  } @personalities_required );
 
 	for ( @personalities_required ) {
 		no strict 'refs';
