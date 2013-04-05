@@ -89,8 +89,9 @@ has 'possible_versions' => (
 
 has 'community' => (
 	isa => 'Str',
-	is => 'ro',
+	is => 'rw',
 	default => 'public',
+	writer => '_set_community',
 );
 
 has 'port' => (

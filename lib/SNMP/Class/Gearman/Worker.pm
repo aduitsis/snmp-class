@@ -108,22 +108,23 @@ sub gather {
 
 	# special code to handle cisco vlan transparent bridge trick
 	# before we call the vendor method, we make sure that the personality supplying it is there
-	if( does_role($s , 'SNMP::Class::Role::Personality::VmVlan' ) && $s->vendor eq 'cisco' ) {
-		my @personalities = qw( SNMP_Agent SysObjectID Dot1Bridge Interfaces Dot1dStp PortTable Dot1dTpFdbAddress);
+
+	if( does_role($s , 'SNMP::Class::Role::Personality::VmVlan' ) && ( $s->vendor eq 'cisco' ) ) {
 		for( $s->get_vlans ) {
 			my %args = @_;
 			$args{ community } .= '@'.$_;
 			$logger->info("doing instance vlan $_ with ".$args{ community });
-			my $s2 = SNMP::Class->new(%args);
-			$s2->prime( @personalities );
 
-			for( @{ $s2->fact_set->facts } ) {
-				$logger->info($_->to_string);
-			}
-			# we only keep only two types of facts, rest is already known
-			$s->fact_set->push( @{ $s2->fact_set->grep( sub { my $type = $_->type; grep { $type eq $_ } qw( dot1d_fdb stp_port ) }  )->fact_set } );
+			$s->change_community( $args{ community } );
+
+			$s->prime( 'Dot1dTpFdbAddress' );
 		}
 	}
+
+	# now the $s is primed with SNMP data
+	# let's trigger the creation of all facts
+	$logger->info('calculating facts');
+	$s->calculate_facts;
 
 	for( @{ $s->fact_set->facts } ) {
 		$logger->info($_->to_string);
