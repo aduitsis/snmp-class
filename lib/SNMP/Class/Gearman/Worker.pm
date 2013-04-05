@@ -30,8 +30,8 @@ The \@job_servers is a reference to an array of
 job server definitions. See how the job_servers method is used with
 L<Gearman::Worker>. 
 
-The $function name is the name by the worker will register itself as a
-fuction with gearman. 
+The $function name is the name by which the worker will register itself as a 
+function with gearman. 
 
 The $id is an identifier (e.g. an integer) that will identify this
 specific worker that will be spawned.
@@ -64,10 +64,9 @@ an identifier of the specific worker e.g. for log messages etc.
 sub generate_worker {
 	defined( my $id = shift ) or die 'missing worker id';
 
-	#construct a sub and return it
+	#construct a sub (closure) and return it
 	return sub {
-		my $arg = Load(shift->arg);
-
+		my $arg = Load(shift->arg); #unserialize the arguments
 		$logger->info("worker $id told to gather_worker with args: ".join(',',@{$arg}));
 
 		#create a session, walk some oids
@@ -75,6 +74,7 @@ sub generate_worker {
 
 		$logger->info("worker $id finished");
 
+		# A serialized factset is returned
 		return $str; #it is already serialized, no need to serialize it again
 
 	}
@@ -95,10 +95,12 @@ sub gather {
 	my $s = SNMP::Class->new(@_);
 
 	$s->prime;
-	for( @{ $s->fact_set->facts } ) {
-		$logger->info($_->to_string);
-	}
 
+	#for( @{ $s->fact_set->facts } ) {
+	#	$logger->info($_->to_string);
+	#}
+
+	# special code to handle cisco vlan transparent bridge trick
 	# before we call the vendor method, we make sure that the personality supplying it is there
 	if( does_role($s , 'SNMP::Class::Role::Personality::VmVlan' ) && $s->vendor eq 'cisco' ) {
 		my @personalities = qw( SNMP_Agent SysObjectID Dot1Bridge Interfaces Dot1dStp PortTable Dot1dTpFdbAddress);
@@ -112,10 +114,10 @@ sub gather {
 			for( @{ $s2->fact_set->facts } ) {
 				$logger->info($_->to_string);
 			}
+			# we only keep only two types of facts, rest is already known
 			$s->fact_set->push( @{ $s2->fact_set->grep( sub { my $type = $_->type; grep { $type eq $_ } qw( dot1d_fdb stp_port ) }  )->fact_set } );
 		}
 	}
-
 
 	for( @{ $s->fact_set->facts } ) {
 		$logger->info($_->to_string);

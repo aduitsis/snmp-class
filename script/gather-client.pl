@@ -16,8 +16,7 @@ use File::Slurp;
 use Socket;
 use Term::ANSIColor qw(:constants);
 use Data::Printer;
-
-use lib '/root/aduitsis/snmp-class-unstable/lib';
+use lib $Bin.'/../lib';
 use SNMP::Class;
 
 
