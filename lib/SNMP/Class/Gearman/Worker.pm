@@ -94,7 +94,13 @@ sub gather {
 
 	my $s = SNMP::Class->new(@_);
 
-	$s->prime;
+	my %args = ( @_ );
+	if( exists( $args{ personalities } ) ) {
+		$s->prime( @{ $args{ personalities } } )
+	}
+	else {
+		$s->prime
+	}
 
 	#for( @{ $s->fact_set->facts } ) {
 	#	$logger->info($_->to_string);

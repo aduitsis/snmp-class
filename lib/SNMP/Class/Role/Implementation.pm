@@ -176,6 +176,12 @@ sub smart {
 	}
 }
 
+sub change_community {
+	my $self = shift // confess 'missing self';
+	my $community = shift // confess 'missing community';
+	$self->community( $community );
+	$self->create_session
+}
 
 
 1;
