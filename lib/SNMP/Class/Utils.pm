@@ -15,6 +15,12 @@ our @ISA=qw(Exporter);
 our @EXPORT = qw(get_attr children_of label_of parent_of oid_of descendants_of);
 
 
+
+sub add_mib_dirs {
+	$logger->debug('Adding MIB directories: '.join(',',@_));
+	SNMP::addMibDirs( @_ ) 
+}
+
 #str2arr converts a .1.2.3.4-style oid to an array
 sub str2arr {
 	my $str = shift(@_) or confess "str2arr 1st arg missing";
