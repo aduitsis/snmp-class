@@ -30,8 +30,8 @@ The \@job_servers is a reference to an array of
 job server definitions. See how the job_servers method is used with
 L<Gearman::Worker>. 
 
-The $function name is the name by the worker will register itself as a
-fuction with gearman. 
+The $function name is the name by which the worker will register itself as a 
+function with gearman. 
 
 The $id is an identifier (e.g. an integer) that will identify this
 specific worker that will be spawned.
@@ -64,10 +64,9 @@ an identifier of the specific worker e.g. for log messages etc.
 sub generate_worker {
 	defined( my $id = shift ) or die 'missing worker id';
 
-	#construct a sub and return it
+	#construct a sub (closure) and return it
 	return sub {
-		my $arg = Load(shift->arg);
-
+		my $arg = Load(shift->arg); #unserialize the arguments
 		$logger->info("worker $id told to gather_worker with args: ".join(',',@{$arg}));
 
 		#create a session, walk some oids
@@ -75,6 +74,7 @@ sub generate_worker {
 
 		$logger->info("worker $id finished");
 
+		# A serialized factset is returned
 		return $str; #it is already serialized, no need to serialize it again
 
 	}
@@ -94,28 +94,37 @@ sub gather {
 
 	my $s = SNMP::Class->new(@_);
 
-	$s->prime;
-	for( @{ $s->fact_set->facts } ) {
-		$logger->info($_->to_string);
+	my %args = ( @_ );
+	if( exists( $args{ personalities } ) ) {
+		$s->prime( @{ $args{ personalities } } )
+	}
+	else {
+		$s->prime
 	}
 
+	#for( @{ $s->fact_set->facts } ) {
+	#	$logger->info($_->to_string);
+	#}
+
+	# special code to handle cisco vlan transparent bridge trick
 	# before we call the vendor method, we make sure that the personality supplying it is there
-	if( does_role($s , 'SNMP::Class::Role::Personality::VmVlan' ) && $s->vendor eq 'cisco' ) {
-		my @personalities = qw( SNMP_Agent SysObjectID Dot1Bridge Interfaces Dot1dStp PortTable Dot1dTpFdbAddress);
+
+	if( does_role($s , 'SNMP::Class::Role::Personality::VmVlan' ) && ( $s->vendor eq 'cisco' ) ) {
 		for( $s->get_vlans ) {
 			my %args = @_;
 			$args{ community } .= '@'.$_;
 			$logger->info("doing instance vlan $_ with ".$args{ community });
-			my $s2 = SNMP::Class->new(%args);
-			$s2->prime( @personalities );
 
-			for( @{ $s2->fact_set->facts } ) {
-				$logger->info($_->to_string);
-			}
-			$s->fact_set->push( @{ $s2->fact_set->grep( sub { my $type = $_->type; grep { $type eq $_ } qw( dot1d_fdb stp_port ) }  )->fact_set } );
+			$s->change_community( $args{ community } );
+
+			$s->prime( 'Dot1dTpFdbAddress' );
 		}
 	}
 
+	# now the $s is primed with SNMP data
+	# let's trigger the creation of all facts
+	$logger->info('calculating facts');
+	$s->calculate_facts;
 
 	for( @{ $s->fact_set->facts } ) {
 		$logger->info($_->to_string);

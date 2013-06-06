@@ -17,8 +17,7 @@ use Socket;
 use Term::ANSIColor qw(:constants);
 use Data::Printer;
 
-use lib "$Bin/../lib";
-
+use lib $Bin.'/../lib';
 use SNMP::Class;
 
 

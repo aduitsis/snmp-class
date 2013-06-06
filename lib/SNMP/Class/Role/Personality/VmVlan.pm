@@ -24,11 +24,14 @@ has 'vlans' => (
 	
 
 sub get_vlans {
-	#my %vlans;
-	#for( $_[0]->vmVlan ) {
-	#	$vlans{ $_->value } = 1;
-	#}	
-	return keys %{ $_[0]->vlans };
+	defined( my $s = shift( @_ ) ) or confess 'incorrect call';
+	# we are repeating a little piece of code here, I will make it more pretty later @@TODO make it more pretty
+	for( $s->vmVlan ) {
+		if(($_->value != 0) && $s->has_exact('vmPortStatus',$_->get_instance_oid) && $s->has_exact('vmVlanType',$_->get_instance_oid)) {
+			$s->vlans->{ $_->value } = $s->vmVlanType($_->get_instance_oid)->value;
+		}
+	}
+	return keys %{ $s->vlans };
 }
 
 sub get_facts {

@@ -72,15 +72,26 @@ sub register_plugin {
 	push @plugins,$_[0]  
 }
 
-sub trigger {
+sub apply_personalities {
 	TRACE 'trigger';
 	no strict 'refs';
-	ROLE_LOOP: for my $role ( @plugins ) {
+	ROLE_LOOP: 
+	for my $role ( @plugins ) {
 		if ( ( ! does_role( $_[0] , $role ) ) && &{ $role . '::predicate' }( $_[0] ) ) {
-			DEBUG $role . ' can be applied to object';
+			DEBUG $role . ' is applied to object';
 			$role->meta->apply( $_[0] );
-			DEBUG $role . ' is now applied to object';
-			# ready everything
+			goto ROLE_LOOP; # we restart the loop because we applied a new role so
+					# we must check everything from the start
+		}	
+	}
+	use strict 'refs';
+}
+
+sub calculate_facts {
+	TRACE 'calculate facts';
+	no strict 'refs';
+	for my $role ( @plugins ) {
+		if( does_role( $_[0] , $role ) ) {
 			eval { 
 				$_[0]->fact_set->push( &{ $role . '::get_facts' }( $_[0] ) );
 			};
@@ -88,19 +99,12 @@ sub trigger {
 				WARN "module $role failed to calculate its facts. Skipping. Error was: $@";	
 				next; 
 			}
-			
-			#now apply role
-			#p $_[0]->engine_id;
-			#p $_[0]->sysname;
-			#p $_[0]->engine_id;
-			#p $_[0]->sysname;
-			goto ROLE_LOOP; # we restart the loop because we applied a new role so
-					# we must check everything from the start
-		}	
-		#&{$role.'::trigger_action'}($_[0],$role);
+		}
 	}
 	use strict 'refs';
 }
+			
+		
 
 
 sub calculate_personality_dependencies {
@@ -123,13 +127,10 @@ sub prime {
 	my $self = shift // die 'incorrect call';
 	my @personalities_requested = (@_)? @_ : @plugins;
 
-
-	#if one is lazy, one will be bored to write SNMP::Class::Role::Personality::
-	#in front of each personality
+	#one will be bored to write SNMP::Class::Role::Personality:: in front of each personality
 	@personalities_requested = map { (/::/)? $_ : __PACKAGE__ . '::'.$_  } @personalities_requested;
 
 	DEBUG 'Personalities requested: '.join(' ',map {  ( $_ =~ / ^ SNMP::Class::Role::Personality:: (\S+) $ /x )  } @personalities_requested );
-	
 
 	my @personalities_required = calculate_personality_dependencies( @personalities_requested );
 
@@ -146,9 +147,10 @@ sub prime {
 			DEBUG 'Role '.$_.' does not require us to get anything';
 		}
 		$self->add( @{ $_ . '::required_oids' } );
+		DEBUG 'requested OIDs added';
 		use strict 'refs';
 	}
-	$self->trigger;
+	$self->apply_personalities;
 }
 
 
