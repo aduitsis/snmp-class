@@ -18,7 +18,8 @@ our @EXPORT = qw(get_attr children_of label_of parent_of oid_of descendants_of);
 
 sub add_mib_dirs {
 	$logger->debug('Adding MIB directories: '.join(',',@_));
-	SNMP::addMibDirs( @_ ) 
+	SNMP::addMibDirs( @_ ); 
+	SNMP::loadModules( 'ALL' )
 }
 
 #str2arr converts a .1.2.3.4-style oid to an array

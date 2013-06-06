@@ -127,7 +127,7 @@ sub gather {
 	$s->calculate_facts;
 
 	for( @{ $s->fact_set->facts } ) {
-		$logger->info($_->to_string);
+		$logger->debug($_->to_string);
 	}
 
 	return $s->fact_set->serialize;

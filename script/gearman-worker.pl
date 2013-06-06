@@ -19,6 +19,7 @@ use Log::Log4perl;
 use Data::Printer;
 use SNMP::Class::Gearman::Worker;
 
+my $logger = Log::Log4perl->get_logger;
 
 my $daemonize = 0; #by default, stay in the foreground
 
@@ -28,9 +29,15 @@ my $workers = 1;
 
 my @job_servers = 'localhost:4730';
 
-GetOptions( 'j=i' => \$workers, 'd' => \$daemonize , 'v' => \$DEBUG , 's=s' => \@job_servers );
+my @mibdirs = ();
 
-my $logger = Log::Log4perl->get_logger;
+GetOptions( 'm=s' => \@mibdirs , 'j=i' => \$workers, 'd' => \$daemonize , 'v' => \$DEBUG , 's=s' => \@job_servers );
+
+for( @mibdirs ) {
+	$logger->info('adding '.$_.' to mibdirs');	
+	SNMP::Class::Utils::add_mib_dirs( $_ )
+}
+
 
 if ( $daemonize ) {
 	daemonize('nobody','nobody','/var/run/gather-worker.pid');
