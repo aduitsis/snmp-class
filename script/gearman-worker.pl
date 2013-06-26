@@ -31,7 +31,9 @@ my @job_servers = 'localhost:4730';
 
 my @mibdirs = ();
 
-GetOptions( 'm=s' => \@mibdirs , 'j=i' => \$workers, 'd' => \$daemonize , 'v' => \$DEBUG , 's=s' => \@job_servers );
+my $use_json;
+
+GetOptions( 'm=s' => \@mibdirs , 'j=i' => \$workers, 'd' => \$daemonize , 'v' => \$DEBUG , 's=s' => \@job_servers, 'json' => \$use_json );
 
 for( @mibdirs ) {
 	$logger->info('adding '.$_.' to mibdirs');	
@@ -47,7 +49,7 @@ my %children;
 
 for my $i ( 1 .. $workers ) {
         $logger->info( "spawning worker $i" );
-        my $pid = SNMP::Class::Gearman::Worker::spawn_worker( \@job_servers, 'snmp_gather' , $i);
+        my $pid = SNMP::Class::Gearman::Worker::spawn_worker( \@job_servers, 'snmp_gather' , $i, $use_json );
 	$children{ $pid } = 1;
 }
 

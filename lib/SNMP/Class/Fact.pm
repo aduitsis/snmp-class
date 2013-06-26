@@ -7,6 +7,7 @@ use Scalar::Util;
 
 use Moose;
 use YAML qw(freeze thaw);
+use JSON;
 
 has 'type' => (
 	is => 'ro',
@@ -29,6 +30,16 @@ sub to_string {
 sub serialize {
 	#freeze( { type => $_[0]->type , slots => $_[0]->slots } )
 	freeze( $_[0] );
+}
+
+sub TO_JSON {
+	encode_json { type => $_[0]->type , slots => $_[0]->slots } 
+}
+
+# WARNING: this is a class method
+sub FROM_JSON {
+	my $data = decode_json( $_[0] );
+	return __PACKAGE__->new( type => $data->{type} , slots => $data->{slots} );
 }
 
 sub unserialize {
@@ -72,6 +83,9 @@ sub BUILDARGS {
 	if ( defined( $args{ frozen } ) ) { 
 		return SNMP::Class::Fact::unserialize( $args{ frozen } )
 	} 
+	elsif( defined( $args{ json } ) ) {
+		return SNMP::Class::Fact::from_json( $args{ json } )
+	}
 	else {
 		return $class->SUPER::BUILDARGS(@_);	
 	}

@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+use v5.14;
+
 use warnings;
 use strict;
 use Test::More qw(no_plan);
@@ -53,4 +55,31 @@ my $fs2 = SNMP::Class::FactSet::Simple::unserialize( $serialized );
 
 ok( $fs2->count == 3 , 'serialized factset keeps the same number of items');
 
+my $json = $f1->TO_JSON;
+is($json,'{"type":"test1","slots":{"gamma":"delta","alpha":"beta"}}','serialize object to json');
+my $f4 = SNMP::Class::Fact::FROM_JSON( $json );
+my $f5 = SNMP::Class::Fact->new( json => $json );
+isa_ok($f4,'SNMP::Class::Fact');
+isa_ok($f5,'SNMP::Class::Fact');
+ok( $f1->matches( $f4 ), 'json serialize and deserialize using TO_JSON and FROM_JSON');
+ok( $f1->matches( $f5 ), 'json serialize and deserialize using TO_JSON and constructor');
+
+
+$json = $f0->TO_JSON;
+is($json,'{"type":"test1","slots":{}}','serialize object to json');
+$f4 = SNMP::Class::Fact::FROM_JSON( $json );
+$f5 = SNMP::Class::Fact->new( json => $json );
+isa_ok($f4,'SNMP::Class::Fact');
+isa_ok($f5,'SNMP::Class::Fact');
+ok( $f0->matches( $f4 ), 'json serialize and deserialize using TO_JSON and FROM_JSON');
+ok( $f0->matches( $f5 ), 'json serialize and deserialize using TO_JSON and constructor');
+
+$json = $fs1->TO_JSON;
+###say $json;
+my $fs3 = SNMP::Class::FactSet::Simple::FROM_JSON( $json );
+isa_ok($fs3,'SNMP::Class::FactSet::Simple');
+
+for (my $i=0;$i<$fs3->count;$i++) {
+	ok( $fs3->item($i)->matches( $fs1->item($i) ) , "item $i matches" )
+}
 
