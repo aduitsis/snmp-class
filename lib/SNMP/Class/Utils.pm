@@ -15,6 +15,13 @@ our @ISA=qw(Exporter);
 our @EXPORT = qw(get_attr children_of label_of parent_of oid_of descendants_of);
 
 
+
+sub add_mib_dirs {
+	$logger->debug('Adding MIB directories: '.join(',',@_));
+	SNMP::addMibDirs( @_ ); 
+	SNMP::loadModules( 'ALL' )
+}
+
 #str2arr converts a .1.2.3.4-style oid to an array
 sub str2arr {
 	my $str = shift(@_) or confess "str2arr 1st arg missing";
@@ -88,6 +95,17 @@ sub enums_of {
 		TRACE "$oid_name is an enumerated type";
 		my %reverse = map { $enum->{$_} => $_ } (keys %{$enum});
 		return \%reverse;
+	}
+	return;
+}
+
+sub reverse_enum_of {
+	my $oid_name = shift(@_) or croak "Incorrect call to enums_of";
+	my $enum = SNMP::Class::Utils::get_attr($oid_name,"enums");
+	if(%{$enum}) {
+		TRACE "$oid_name is an enumerated type";
+		my %forward = map { $_ => $enum->{$_} } (keys %{$enum});
+		return \%forward;
 	}
 	return;
 }

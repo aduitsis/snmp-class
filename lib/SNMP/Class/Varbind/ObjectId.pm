@@ -25,6 +25,8 @@ sub matches {
 			||
 			( SNMP::Class::Utils::syntax_of( $_[0]->get_label ) eq 'OBJECTID') #this is ugly, but NetSNMP returns 'OBJECTID' instead of 'OBJECT IDENTIFIER'
 		)
+		|| # this case is to handle objects with TC 'AutonomousType', i.e. entPhysicalVendorType
+		( defined( $_[0]->type ) && ( $_[0]->type eq 'OBJECTID' ) ) 
 	);
 	return;
 }

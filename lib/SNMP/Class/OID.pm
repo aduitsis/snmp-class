@@ -5,8 +5,8 @@ use Data::Dumper;
 use Moose;
 use Moose::Util::TypeConstraints;
 use Scalar::Util qw(looks_like_number);
-use Log::Log4perl qw(:easy);
-my $logger = get_logger();
+use Log::Log4perl;
+my $logger = Log::Log4perl::get_logger();
 
 #we test to see whether we can load NetSNMP::OID
 my $has_netsnmp;

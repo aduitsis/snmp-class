@@ -10,6 +10,7 @@ has 'version' => (
 	isa => 'Num',
 	init_arg => undef,#user must not touch this
 );
+
  
 #this used to be uncommented, but, at some Moose
 #version, using +session in one of the actual implementations
@@ -26,7 +27,7 @@ has 'sysname' => (
 	is => 'ro',
 	isa => 'Str',
 	required => 0,
-	init_arg => undef,
+	#init_arg => undef, #commented out because each application of a role overwrites the original value if this is undef
 	writer => '_set_sysname',
 );
 
@@ -34,7 +35,7 @@ has 'engine_id' => (
 	is => 'ro',
 	isa => 'Maybe[Str]',
 	required => 0,
-	init_arg => undef,
+	#init_arg => undef, #commented out because each application of a role overwrites the original value if this is undef
 	default => '',
 	writer => '_set_engine_id',
 );
@@ -80,7 +81,7 @@ sub create_session {
 
 		return $self;#someone might want to use our object directly in the same line with the create_session method
 	}
-	confess "Cannot create a session to ".$self->hostname;		
+	confess "Cannot create a session to ".$self->hostname.' using versions '.join(',',@{$self->possible_versions});		
 }
 
 
@@ -175,6 +176,12 @@ sub smart {
 	}
 }
 
+sub change_community {
+	my $self = shift // confess 'missing self';
+	my $community = shift // confess 'missing community';
+	$self->_set_community( $community );
+	$self->create_session
+}
 
 
 1;

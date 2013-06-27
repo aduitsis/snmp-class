@@ -6,6 +6,8 @@ use SNMP::Class::Role::Implementation;
 use Log::Log4perl qw(:easy);
 my $logger = Log::Log4perl->get_logger();
 
+#please load all the MIBs from the designated directories
+SNMP::loadModules('ALL');
 
 #try to load the SNMP libraries from NetSNMP
 my %have;
@@ -35,6 +37,8 @@ sub init {	#no need to use eval here...it is taken care of by the Implementation
 		community => 'Community',
 		hostname => 'DestHost',
 		port => 'RemotePort',
+		timeout => 'Timeout',
+		retries => 'Retries',
 	); #@@@@ don't forget to take care of the rest of the parameters later!!!
 
 	my @params;
@@ -92,7 +96,7 @@ sub snmpbulkwalk {
 	#After all, he probably will have a good sense about how big the is walk he is doing.
 	
 	my ($temp) = $self->session->bulkwalk(0,10,$vb->generate_netsnmpvarbind); #magic number 10 for the time being
-	die $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
+	confess $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
 
 	for my $object (@{$temp}) {
 		my $vb = SNMP::Class::Varbind->new(varbind=>$object);		
@@ -114,7 +118,7 @@ sub snmpgetnext {
 	my $netsnmp_varbind = $vb->generate_netsnmpvarbind;
 	
 	my $value = $self->session->getnext($netsnmp_varbind);
-	die $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
+	die $self->session->{ErrorStr}.' while trying to getnext '.$vb->to_string if ($self->session->{ErrorNum} != 0);
 	
 	return SNMP::Class::Varbind->new(varbind=>$netsnmp_varbind);
 
