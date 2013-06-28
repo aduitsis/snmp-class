@@ -18,6 +18,12 @@ BEGIN {
 
 my $f1 = SNMP::Class::Fact->new( type => 'test1' , slots => { 'alpha' => 'beta' , 'gamma' => 'delta' } );
 isa_ok($f1,'SNMP::Class::Fact');
+my $f2 = SNMP::Class::Fact->new( type => 'test2' , slots => { 'epsilon' => 'zeta' , 'eta' => 'delta' } );
+isa_ok($f2,'SNMP::Class::Fact');
+
+
+my $fs1 = SNMP::Class::FactSet::Simple->new( fact_set => [ $f1, $f2 ] );
+isa_ok($fs1,'SNMP::Class::FactSet::Simple');
 
 my $a1 = SNMP::Class::Rete::Alpha->new( type => 'test1', bind => sub { 
 	# (test1 (alpha: 'beta;) (gamma: ?x) )
@@ -31,8 +37,6 @@ isa_ok($a1,'SNMP::Class::Rete::Alpha');
 my $inst_a1_f1 = $a1->instantiate_with_fact( $f1 );
 isa_ok( $inst_a1_f1, 'SNMP::Class::Rete::Instantiation' );
 
-my $f2 = SNMP::Class::Fact->new( type => 'test2' , slots => { 'epsilon' => 'zeta' , 'eta' => 'delta' } );
-isa_ok($f2,'SNMP::Class::Fact');
 
 my $a2 = SNMP::Class::Rete::Alpha->new( type => 'test2', bind => sub { 
 	# (test1 (epsilon: 'zeta') (eta: ?x) )
@@ -46,5 +50,13 @@ isa_ok($a2,'SNMP::Class::Rete::Alpha');
 my $inst_a2_f2 = $a2->instantiate_with_fact( $f2 );
 isa_ok( $inst_a2_f2, 'SNMP::Class::Rete::Instantiation' );
 
-# my $b1 = SNMP::Class::Rete::Beta->new( alphas => [ $a1, $a2 ] , action => sub { });
+my $r1 = SNMP::Class::Rete::Rule->new( lh => [ $a1, $a2 ] , rh => sub { say 'activation' });
+isa_ok($r1,'SNMP::Class::Rete::Rule');
+
+my $rete = SNMP::Class::Rete->new( fact_set => $fs1 , rules => [ $r1 ]);
+
+say $fs1,$rete->fact_set;
+
+$rete->reset;
+$rete->run;
 

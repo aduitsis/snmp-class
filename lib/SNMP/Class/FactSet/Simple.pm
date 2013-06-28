@@ -79,4 +79,12 @@ sub FROM_JSON {
 	__PACKAGE__->new( fact_set => [ map { SNMP::Class::Fact->new( type => $_->{type} , slots => $_->{slots} ) } @{ decode_json $_[0] } ] )
 }	
 
+sub clone {
+	return __PACKAGE__->new( fact_set => [ @{ $_[0]->facts } ] )
+}
+
+sub deduplicate {
+	# TODO: implement
+}
+
 1;
