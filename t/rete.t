@@ -55,8 +55,6 @@ isa_ok($r1,'SNMP::Class::Rete::Rule');
 
 my $rete = SNMP::Class::Rete->new( fact_set => $fs1 , rules => [ $r1 ]);
 
-say $fs1,$rete->fact_set;
-
 $rete->reset;
 $rete->run;
 

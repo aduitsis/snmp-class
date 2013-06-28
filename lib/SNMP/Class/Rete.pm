@@ -42,6 +42,4 @@ sub alpha_nodes {
 	map { @{ $_->lh } } ( @{ $_[0]->rules } ) 
 }
 
-
-
 1;
