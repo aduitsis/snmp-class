@@ -18,12 +18,6 @@ has 'name' => (
 		default => 'anonymous',
 );
 
-has 'lh' => (
-        is => 'ro',
-        isa => 'ArrayRef[SNMP::Class::Rete::Alpha]',
-        required => 1,
-);
-
 has 'rh' => (
 	is => 'ro',
 	isa => 'CodeRef',

@@ -5,6 +5,7 @@ use v5.14;
 use warnings;
 use strict;
 use Test::More qw(no_plan);
+use Data::Printer;
 
 BEGIN {
         use Data::Dumper;
@@ -13,6 +14,8 @@ BEGIN {
         use_ok("SNMP::Class::FactSet::Simple");
         use_ok("SNMP::Class::Rete");
 }
+
+
 
 
 
@@ -25,6 +28,7 @@ isa_ok($f2,'SNMP::Class::Fact');
 my $fs1 = SNMP::Class::FactSet::Simple->new( fact_set => [ $f1, $f2 ] );
 isa_ok($fs1,'SNMP::Class::FactSet::Simple');
 
+
 my $a1 = SNMP::Class::Rete::Alpha->new( type => 'test1', bind => sub { 
 	# (test1 (alpha: 'beta;) (gamma: ?x) )
 	( $_[0]->slots->{alpha} eq 'beta' )
@@ -33,10 +37,6 @@ my $a1 = SNMP::Class::Rete::Alpha->new( type => 'test1', bind => sub {
 });
 
 isa_ok($a1,'SNMP::Class::Rete::Alpha');
-
-my $inst_a1_f1 = $a1->instantiate_with_fact( $f1 );
-isa_ok( $inst_a1_f1, 'SNMP::Class::Rete::Instantiation' );
-
 
 my $a2 = SNMP::Class::Rete::Alpha->new( type => 'test2', bind => sub { 
 	# (test1 (epsilon: 'zeta') (eta: ?x) )
@@ -47,14 +47,29 @@ my $a2 = SNMP::Class::Rete::Alpha->new( type => 'test2', bind => sub {
 
 isa_ok($a2,'SNMP::Class::Rete::Alpha');
 
-my $inst_a2_f2 = $a2->instantiate_with_fact( $f2 );
-isa_ok( $inst_a2_f2, 'SNMP::Class::Rete::Instantiation' );
+#my $r1 = SNMP::Class::Rete::Rule->new( lh => [ $a1, $a2 ] , rh => sub { say 'activation' });
+#isa_ok($r1,'SNMP::Class::Rete::Rule');
 
-my $r1 = SNMP::Class::Rete::Rule->new( lh => [ $a1, $a2 ] , rh => sub { say 'activation' });
-isa_ok($r1,'SNMP::Class::Rete::Rule');
+my $rete = SNMP::Class::Rete->new( fact_set => $fs1 );
 
-my $rete = SNMP::Class::Rete->new( fact_set => $fs1 , rules => [ $r1 ]);
+$rete->insert_alpha( $a1 , $a2 );
+
+my $r1 = SNMP::Class::Rete::Rule->new( name => 'simple test', rh => sub { say 'Hello world' } );
+
+$a1->point_to_rule( $r1 );
+$a2->point_to_rule( $r1 );
+
+isa_ok( $rete->index->{test1}->[0], 'SNMP::Class::Rete::Alpha');
+isa_ok( $rete->index->{test2}->[0], 'SNMP::Class::Rete::Alpha');
+
 
 $rete->reset;
+
+
+say Dumper( $a1->combine( $a2 ));
+say Dumper( $rete );
+
+
+#say Dumper( $rete );
 $rete->run;
 

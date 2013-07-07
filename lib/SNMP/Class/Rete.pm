@@ -9,7 +9,7 @@ use SNMP::Class::Rete::Instantiation;
 
 use Moose;
 
-
+my $fact_counter = 1;
 
 has 'fact_set' => (
 	is => 'ro',
@@ -21,7 +21,13 @@ has 'fact_set' => (
 has 'rules' => (
 	is => 'ro',
 	isa => 'ArrayRef[SNMP::Class::Rete::Rule]',
-	required => 1,
+	required => 0,
+);
+
+has 'index' => (
+	is => 'ro',
+	isa => 'HashRef[Str]',
+	default => sub { {} },
 );
 
 sub BUILD {
@@ -30,16 +36,43 @@ sub BUILD {
 }
 
 sub reset {
-	say 'reset'
+	my $self = shift // die 'incorrect call';
+	$self->insert_fact( @{ $self->fact_set->facts } )
 }
 
 sub run {
 	say 'run'
 }
 
-sub alpha_nodes {
-	#remember to deduplicate the alphas
-	map { @{ $_->lh } } ( @{ $_[0]->rules } ) 
+sub insert_fact {
+	my $self = shift // die 'incorrect call';
+
+	for my $fact ( @_ ) {
+		if( exists $self->index->{ $fact->type } ) {
+			for my $alpha ( @{ $self->index->{ $fact->type } } ) {
+				my $inst = $alpha->instantiate_with_fact( $fact_counter++ => $fact );
+			}
+		}
+	}
 }
+
+sub insert_alpha {
+	my $self = shift // die 'incorrect call';
+
+	for my $alpha ( @_ ) {
+		push @{ $self->index->{ $alpha->type } },$alpha;
+	}
+}
+
+sub insert_rule {
+	my $self = shift // die 'incorrect call';
+	for my $rule ( @_ ) {
+		push @{ $self->rules }, $rule;
+	}
+
+}
+
+
+
 
 1;
