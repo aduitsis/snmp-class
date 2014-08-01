@@ -27,7 +27,7 @@ This library is built using L<Moose>, with care taken so that the pyramid of fun
 	# print all the interfacesÕ descriptions
 	$s->ifDescr->map(sub { say $_->value } );
 	
-	# print all the ethernet interfacesÕ descriptions 
+	# print all the ethernet interfaces' descriptions 
 	$s->ifDescr->map( sub { 
 		say $_->value 
 			if ( $s->ifType($_->get_instance_oid)->value eq 'ethernet-csmacd') 

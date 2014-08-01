@@ -27,7 +27,7 @@ This library is built using L<Moose>, with care taken so that the pyramid of fun
 	# print all the interfacesÕ descriptions
 	$s->ifDescr->map(sub { say $_->value } );
 	
-	# print all the ethernet interfacesÕ descriptions 
+	# print all the ethernet interfaces' descriptions 
 	$s->ifDescr->map( sub { 
 		say $_->value 
 			if ( $s->ifType($_->get_instance_oid)->value eq 'ethernet-csmacd') 
@@ -109,7 +109,6 @@ Lastly, the SNMP::Info (L<http://snmp-info.sourceforge.net/>) library presents s
 =head2 Code
 
 Git repo can be found at L<https://github.com/aduitsis/snmp-class>. Unfortunately, documentation is rather sparse at this point. 
-
 
 =cut
 
