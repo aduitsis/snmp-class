@@ -33,7 +33,7 @@ my @mibdirs = ();
 
 my $use_json;
 
-GetOptions( 'm=s' => \@mibdirs , 'j=i' => \$workers, 'd' => \$daemonize , 'v' => \$DEBUG , 's=s' => \@job_servers, 'json' => \$use_json );
+GetOptions( 'mib|mibs|M=s' => \@mibdirs , 'j=i' => \$workers, 'd' => \$daemonize , 'v' => \$DEBUG , 's=s' => \@job_servers, 'json' => \$use_json );
 
 for( @mibdirs ) {
 	$logger->info('adding '.$_.' to mibdirs');	
