@@ -21,7 +21,7 @@ use JSON;
 
 my $logger = Log::Log4perl::get_logger();
 
-=head2 spawn_worker( \@job_servers , $function_name , $id )
+=head2 spawn_worker( \@job_servers , $function_name , $id, $json )
 
 Spawns a worker process that will generate a gearman worker and attach
 it to a gearman server. So it basically fork()s and then registers a
@@ -36,6 +36,9 @@ function with gearman.
 
 The $id is an identifier (e.g. an integer) that will identify this
 specific worker that will be spawned.
+
+If the $json parameter is true, the worker will return its results in JSON format 
+instead of YAML. If missing, defaults to false.
 
 =cut
 
