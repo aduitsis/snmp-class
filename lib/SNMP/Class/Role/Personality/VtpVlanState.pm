@@ -36,7 +36,17 @@ sub get_facts {
 			&&
 			( $s->vtpVlanIfIndex($_->get_instance_oid)->value != 0 )
 		) {
-			$r{interface} = $s->get_ifunique($s->vtpVlanIfIndex($_->get_instance_oid)->value);
+			# make sure that the interface index actually is present in the ifTable. 
+			# some cisco switches can report a once-existed-now-gone ifIndex in their vtpVlanIfIndex
+			if ( $s->has_exact( 'ifIndex' , $_->get_instance_oid ) ) {
+				$r{interface} = $s->get_ifunique($s->vtpVlanIfIndex($_->get_instance_oid)->value);
+			} 
+			else { 
+				$logger->warn('Warning: ' . $s->sysname . ' reports a vtpVlanIfIndex of ' .
+					$s->vtpVlanIfIndex($_->get_instance_oid)->value.' for vlan ' . 
+					$_->get_instance_oid->slice(2)->to_number . 
+					' but that value does not exist in the interfaces table');
+			}
 		}
 		SNMP::Class::Fact->new(
 			type => 'vlan',
