@@ -34,9 +34,9 @@ sub adopt {
 	}
 }
 
-#sub value {
-#	return uc join(':',(unpack '(H2)*',$_[0]->raw_value))
-#}
+sub mac_address {
+	return uc join(':',(unpack '(H2)*',$_[0]->raw_value))
+}
 
 
 1;

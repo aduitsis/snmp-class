@@ -54,7 +54,7 @@ sub get_facts {
 				type => 'dot1d_fdb',
 				slots => {
 					interface => $s->get_ifunique($s->dot1dBasePortIfIndex($port)->value),
-					mac_address => $_->value,
+					mac_address => $_->mac_address,
 					status => $status,
 					system => $s->sysname,
 					engine_id => $s->engine_id,
