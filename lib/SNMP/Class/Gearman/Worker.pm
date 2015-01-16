@@ -108,6 +108,8 @@ sub gather {
 	#SNMP::addMibDirs("$Bin/../../mibs");
 	#SNMP::loadModules('ALL');
 
+	my $start_time = time;
+
 	my $s = SNMP::Class->new(@_);
 
 	my %args = ( @_ );
@@ -145,11 +147,27 @@ sub gather {
 		$s->change_community( $original_community )
 	}
 
+	my $stop_time = time;
+
 	# now the $s is primed with SNMP data
 	# let's trigger the creation of all facts
 	$logger->info('calculating facts');
 	$s->calculate_facts;
 
+	$s->fact_set->push( SNMP::Class::Fact->new( 
+		type	=> 'gather_meta',
+		slots	=> { 
+			start_time	=> $start_time,
+			stop_time	=> $stop_time,
+			target		=> $s->hostname,
+			community	=> $s->community,
+			port		=> $s->port,
+			timeout		=> $s->timeout,
+			retries		=> $s->retries,
+			version		=> $s->version,
+		},
+	));
+			
 	for( @{ $s->fact_set->facts } ) {
 		$logger->debug($_->to_string);
 	}

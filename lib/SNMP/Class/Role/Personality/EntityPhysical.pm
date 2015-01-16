@@ -20,26 +20,29 @@ sub get_facts {
 	defined( my $self = shift( @_ ) ) or confess 'incorrect call';
 
 	$self->entPhysicalName->map(sub {
-		SNMP::Class::Fact->new( 	
-				type => 'hardware_entity',
-				slots => {
+		my $r = { 
 					system => $self->sysname,
 					engine_id => $self->engine_id,
 					name => $_->value,
 					description => $self->entPhysicalDescr($_->get_instance_oid)->value,
 					vendor_type => $self->entPhysicalVendorType($_->get_instance_oid)->value,
 					physical_class => $self->entPhysicalClass($_->get_instance_oid)->value,    
-					hardware_revision => $self->entPhysicalHardwareRev($_->get_instance_oid)->value,
-					firmware_revision => $self->entPhysicalFirmwareRev($_->get_instance_oid)->value,
-					software_revision => $self->entPhysicalSoftwareRev($_->get_instance_oid)->value,
-					serial_number => $self->entPhysicalSerialNum($_->get_instance_oid)->value,
-					manufacturer => $self->entPhysicalMfgName($_->get_instance_oid)->value,
-					model => $self->entPhysicalModelName($_->get_instance_oid)->value,
-					alias => $self->entPhysicalAlias($_->get_instance_oid)->value,
-					asset_id => $self->entPhysicalAssetID($_->get_instance_oid)->value,
-					is_fru => $self->entPhysicalIsFRU($_->get_instance_oid)->value,
-				},
-		);
+		};
+		$r->{ hardware_revision } = $self->entPhysicalHardwareRev($_->get_instance_oid)->value	if $self->has_exact( 'entPhysicalHardwareRev', $_->get_instance_oid );
+		$r->{ firmware_revision } = $self->entPhysicalFirmwareRev($_->get_instance_oid)->value	if $self->has_exact( 'entPhysicalFirmwareRev', $_->get_instance_oid );
+		$r->{ software_revision } = $self->entPhysicalSoftwareRev($_->get_instance_oid)->value	if $self->has_exact( 'entPhysicalSoftwareRev', $_->get_instance_oid ); 	
+		$r->{ serial_number } = $self->entPhysicalSerialNum($_->get_instance_oid)->value	if $self->has_exact( 'entPhysicalSerialNum', $_->get_instance_oid );
+		$r->{ manufacturer } = $self->entPhysicalMfgName($_->get_instance_oid)->value		if $self->has_exact( 'entPhysicalMfgName', $_->get_instance_oid );
+		$r->{ model } = $self->entPhysicalModelName($_->get_instance_oid)->value		if $self->has_exact( 'entPhysicalModelName', $_->get_instance_oid ); 
+		$r->{ alias } = $self->entPhysicalAlias($_->get_instance_oid)->value			if $self->has_exact( 'entPhysicalAlias', $_->get_instance_oid );
+		$r->{ asset_id } = $self->entPhysicalAssetID($_->get_instance_oid)->value		if $self->has_exact( 'entPhysicalAssetID', $_->get_instance_oid );
+		$r->{ is_fru } = $self->entPhysicalIsFRU($_->get_instance_oid)->value			if $self->has_exact( 'entPhysicalIsFRU', $_->get_instance_oid );
+
+		SNMP::Class::Fact->new( 	
+				type => 'hardware_entity',
+				slots => $r,
+		)
+		
 	})
 
 }
