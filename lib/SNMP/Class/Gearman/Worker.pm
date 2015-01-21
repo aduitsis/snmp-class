@@ -165,6 +165,8 @@ sub gather {
 			timeout		=> $s->timeout,
 			retries		=> $s->retries,
 			version		=> $s->version,
+			system		=> $s->sysname,
+			engine_id	=> $s->engine_id,
 		},
 	));
 			

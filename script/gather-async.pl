@@ -4,7 +4,8 @@ use v5.14;
 
 use warnings;
 use strict;
-use Gearman::Client;
+use AnyEvent::Gearman;
+use AnyEvent::Socket;
 use YAML;
 use Data::Dumper;
 use Fatal qw(open close);
@@ -23,50 +24,71 @@ use SNMP::Class;
 
 $Term::ANSIColor::AUTORESET = 1;
 
-my @job_servers = ( 'worker0:4730' );
-my $recurse;
-my $dumpdir;
 
-GetOptions( 's=s' => \@job_servers , 'r' => \$recurse, 'save=s' => \$dumpdir );
+# AnyEvent doc: just call $quit_program->send anytime you want to quit
+my $quit_program = AnyEvent->condvar;
+
+my $job_servers = [ 'localhost:4730' ];
+my $recurse;
+
+GetOptions( 's=s' => $job_servers , 'r' => \$recurse );
 
 #this starts empty, will get filled up as we move along
 my %visited_ips;
 
-my $client = Gearman::Client->new;
+my $gearman = AnyEvent::Gearman::Client->new( job_servers => $job_servers ) ;
 
-$client->job_servers(@job_servers);
+### $client->job_servers(@job_servers);
 
-my $taskset = $client->new_task_set;
+### my $taskset = $client->new_task_set;
 
 
 my $host = shift // die 'missing argument: hostname to gather from';
 
-new_task( $taskset , $host );
+new_task( $gearman , $host );
 
-$taskset->wait;
 
+my $guard = tcp_server 'unix/', "$Bin/control.sock", sub { 
+	my ($fh) = @_;
+	say { $fh } 'Hello, ready to accept commands';
+	my $io_watcher = AnyEvent->io ( 
+		fh	=> $fh,
+		poll	=> 'r',
+		cb	=> sub { 
+			warn "io event <$_[0]>\n";
+			chomp (my $input = <$fh>);
+			warn "read: $input\n";
+			$quit_program->send if $input =~ /^(quit|exit)/i;
+		}
+	)
+};
+
+
+### $taskset->wait;
+$quit_program->recv;
 
 sub new_task { 
-	my $taskset = shift // die 'incorrect call';
+	my $gearman = shift // die 'incorrect call';
 	my $hostname = shift // die 'incorrect call';
 	my $community = shift // 'public';
 	my $timeout = shift // 1000000;
 	say STDERR GREEN "$hostname: adding task";
 	my $task = Dump(  [ hostname => $hostname , community => 'public' , timeout => 1000000, ] );
-	$taskset->add_task( 'snmp_gather' => $task, {
-		on_complete	=> generate_completion_handler($taskset,$hostname),
+	$gearman->add_task( 'snmp_gather' => $task, 
+		on_complete	=> generate_completion_handler($gearman,$hostname),
 		on_fail		=> generate_failure_handler($hostname),
-	});
+	);
 	say STDERR GREEN "$hostname: submitted"
 }
 
 sub generate_completion_handler { 
-	my $taskset = shift // die 'missing taskset';
+	my $gearman = shift // die 'missing gearman';
 	my $hostname = shift // die 'missing hostname';
 	sub { 
+		### p $_[1];
 		say STDERR GREEN "$hostname: gather completed";
-		my $fact_set = SNMP::Class::FactSet::Simple::unserialize( ${$_[0]} ) ;
-		factset_processor( $taskset , $hostname, $fact_set ) ; 
+		my $fact_set = SNMP::Class::FactSet::Simple::unserialize( $_[1] ) ;
+		factset_processor( $gearman , $hostname, $fact_set ) ; 
 		say STDERR GREEN "$hostname: processing completed"
 		
 	}
@@ -81,7 +103,7 @@ sub generate_failure_handler {
 }
 
 sub factset_processor { 
-	my $taskset = shift // die 'missing taskset';
+	my $gearman = shift // die 'missing taskset';
 	my $hostname = shift // die 'missing hostname';
 	my $fact_set = shift // die 'missing fact_set';
 	my $sysname = get_sysname( $fact_set );	
@@ -91,15 +113,8 @@ sub factset_processor {
 	say STDERR BOLD BLACK "$hostname: sysname is $sysname";
 	say STDERR BOLD BLACK "$hostname: neighbors are: ".join(' , ',@neighbors);
 	say STDERR BOLD BLACK "$hostname: host IPv4 addresses are: ".join(' , ',@ipv4s);
-	say '(deffacts snmp_knowledge "facts on '.$sysname.'"';
 	for( @{ $fact_set->facts } ) {
-		say '(' . $_->to_string . ')'
-	}
-	say ')';
-	if( $dumpdir ) {
-		my $filename = "$dumpdir/$sysname.serialized";
-		say STDERR BOLD BLACK "$hostname: dumping to $filename";
-		DumpFile($filename,$fact_set)
+		say $_->to_string;
 	}
 	if ( $recurse ) { 
 		for my $neighbor ( @neighbors ) {
@@ -107,7 +122,7 @@ sub factset_processor {
 				say STDERR BOLD BLACK "$hostname: neighbor $neighbor already visited"
 			}
 			else {
-				new_task( $taskset , $neighbor )
+				new_task( $gearman , $neighbor )
 			}
 		}
 	}
