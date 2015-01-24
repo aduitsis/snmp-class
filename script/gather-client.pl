@@ -107,6 +107,7 @@ sub factset_processor {
 				say STDERR BOLD BLACK "$hostname: neighbor $neighbor already visited"
 			}
 			else {
+				$visited_ips{ $neighbor } = 1; #make sure we don't revisit it later
 				new_task( $taskset , $neighbor )
 			}
 		}

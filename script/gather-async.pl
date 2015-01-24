@@ -14,7 +14,7 @@ use FindBin qw($Bin);
 use Getopt::Long;
 use YAML qw(DumpFile);
 use File::Slurp;
-use Socket;
+### use Socket;
 use Term::ANSIColor qw(:constants);
 use Data::Printer;
 
@@ -43,24 +43,57 @@ my $gearman = AnyEvent::Gearman::Client->new( job_servers => $job_servers ) ;
 ### my $taskset = $client->new_task_set;
 
 
-my $host = shift // die 'missing argument: hostname to gather from';
+#my $host = shift // die 'missing argument: hostname to gather from';
+#new_task( $gearman , $host );
 
-new_task( $gearman , $host );
-
-
+my $fact_sets = { } ;
+my $watchers;
 my $guard = tcp_server 'unix/', "$Bin/control.sock", sub { 
+	p $watchers;
 	my ($fh) = @_;
-	say { $fh } 'Hello, ready to accept commands';
+	binmode( $fh, ":unix" );
+	### say { $fh } "Hello, ready to accept commands";
+	print { $fh } 'omnidisco> ';
+	say "Hello, ready to accept commands from $fh";
 	my $io_watcher = AnyEvent->io ( 
 		fh	=> $fh,
 		poll	=> 'r',
 		cb	=> sub { 
-			warn "io event <$_[0]>\n";
-			chomp (my $input = <$fh>);
-			warn "read: $input\n";
-			$quit_program->send if $input =~ /^(quit|exit)/i;
+			### p @_;
+			### warn "io event <$_[0]>\n";
+			my $input = <$fh> // do { 
+				delete $watchers->{ $fh };
+				say "client closed the connection";
+				return
+			};
+			chomp $input;
+			if( my ( $target ) = ( $input =~ /^(?:add|walk|target)\s+(\S+)$/ ) ) {
+				say { $fh } "Asked to query $target";
+				new_task( $gearman , $target )	
+			}
+			elsif( my ( $query ) = ( $input =~ /^info\s+(\S+)$/ ) ) {
+				if( $fact_sets->{ $query } ) { 
+					for my $fact ( @{ $fact_sets->{ $query }->facts} ) { 
+						say { $fh } $fact->to_string;
+					}
+				}
+				else { 
+					say { $fh } "don't know anything about $query";
+				}
+			}
+			elsif( $input =~ /^dump.*fact/ ) {
+				say { $fh } join(' ', keys %{$fact_sets} );
+			}
+			elsif( $input =~ /^(quit|exit)/i ) {
+				$quit_program->send 
+			}
+			else { 
+				say { $fh } "My apologies, I don't know how to $input"
+			}
+			print { $fh } 'omnidisco> ';
 		}
-	)
+	);
+	$watchers->{ $fh } = $io_watcher
 };
 
 
@@ -116,6 +149,9 @@ sub factset_processor {
 	for( @{ $fact_set->facts } ) {
 		say $_->to_string;
 	}
+	$fact_sets->{$hostname} = $fact_set;
+	$fact_sets->{ $sysname } = $fact_set;
+	$fact_sets->{ $_ } = $fact_set for( @ipv4s );
 	if ( $recurse ) { 
 		for my $neighbor ( @neighbors ) {
 			if ( $visited_ips{ $neighbor } ) { 
