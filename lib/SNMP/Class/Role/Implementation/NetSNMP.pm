@@ -93,7 +93,6 @@ sub snmpbulkwalk {
 	#setting it too low will degrade performance in large datasets since the client will need to generate more traffic
 	#So, let's set it to some reasonable value, say 10.
 	#we definitely should consider giving the user some knob to turn.
-	#After all, he probably will have a good sense about how big the is walk he is doing.
 	
 	my ($temp) = $self->session->bulkwalk(0,10,$vb->generate_netsnmpvarbind); #magic number 10 for the time being
 	confess $self->session->{ErrorStr} if ($self->session->{ErrorNum} != 0);
