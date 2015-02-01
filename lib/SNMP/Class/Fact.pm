@@ -23,8 +23,13 @@ has 'slots' => (
 );
 
 
+sub quote_str { 
+	$_[0] =~ s/"/\\"/g;
+	$_[0]
+}
+
 sub to_string {
-	$_[0]->type . ' ' . join(' ',map { '(' . $_ . ' "'. $_[0]->slots->{$_} . '")' } ( keys %{ $_[0]->slots } ) ) ;
+	$_[0]->type . ' ' . join(' ',map { '(' . $_ . ' "'. quote_str($_[0]->slots->{$_}) . '")' } ( sort keys %{ $_[0]->slots } ) ) ;
 }
 
 sub serialize {

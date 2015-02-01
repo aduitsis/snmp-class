@@ -22,7 +22,7 @@ sub get_facts {
 		slots => {
 			system => $s->sysname,
 			engine_id => $s->engine_id,
-			address => $s->dot1dBaseBridgeAddress(0)->value,
+			address => $s->dot1dBaseBridgeAddress(0)->mac_address,
 			type => $s->dot1dBaseType(0)->value,
 		}
 	);

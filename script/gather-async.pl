@@ -21,6 +21,7 @@ use Data::Printer;
 use lib $Bin.'/../lib';
 use SNMP::Class;
 
+binmode( STDOUT, ":unix" );
 
 $Term::ANSIColor::AUTORESET = 1;
 
@@ -31,12 +32,18 @@ my $quit_program = AnyEvent->condvar;
 my $job_servers = [ 'localhost:4730' ];
 my $recurse;
 
-GetOptions( 's=s' => $job_servers , 'r' => \$recurse );
+my @seed;
+
+GetOptions( 's=s' => $job_servers , 'r' => \$recurse , 'seed=s' => \@seed );
 
 #this starts empty, will get filled up as we move along
 my %visited_ips;
 
-my $gearman = AnyEvent::Gearman::Client->new( job_servers => $job_servers ) ;
+sub connect_to_gearman { 
+	AnyEvent::Gearman::Client->new( job_servers => $job_servers ) ;
+}
+
+my $gearman = connect_to_gearman ; 
 
 ### $client->job_servers(@job_servers);
 
@@ -54,7 +61,7 @@ my $guard = tcp_server 'unix/', "$Bin/control.sock", sub {
 	binmode( $fh, ":unix" );
 	### say { $fh } "Hello, ready to accept commands";
 	print { $fh } 'omnidisco> ';
-	say "Hello, ready to accept commands from $fh";
+	say STDERR "new connection from $fh";
 	my $io_watcher = AnyEvent->io ( 
 		fh	=> $fh,
 		poll	=> 'r',
@@ -63,7 +70,7 @@ my $guard = tcp_server 'unix/', "$Bin/control.sock", sub {
 			### warn "io event <$_[0]>\n";
 			my $input = <$fh> // do { 
 				delete $watchers->{ $fh };
-				say "client closed the connection";
+				say STDERR "client closed the connection";
 				return
 			};
 			chomp $input;
@@ -96,6 +103,8 @@ my $guard = tcp_server 'unix/', "$Bin/control.sock", sub {
 	$watchers->{ $fh } = $io_watcher
 };
 
+
+new_task( $gearman, $_ ) for(@seed);
 
 ### $taskset->wait;
 $quit_program->recv;
@@ -146,9 +155,12 @@ sub factset_processor {
 	say STDERR BOLD BLACK "$hostname: sysname is $sysname";
 	say STDERR BOLD BLACK "$hostname: neighbors are: ".join(' , ',@neighbors);
 	say STDERR BOLD BLACK "$hostname: host IPv4 addresses are: ".join(' , ',@ipv4s);
+	state $counter = 1;
+	say '(deffacts snmp_knowledge_'.$counter++.' "facts on '.$sysname.'"';
 	for( @{ $fact_set->facts } ) {
-		say $_->to_string;
+		say '('.$_->to_string.')';
 	}
+        say ')';
 	$fact_sets->{$hostname} = $fact_set;
 	$fact_sets->{ $sysname } = $fact_set;
 	$fact_sets->{ $_ } = $fact_set for( @ipv4s );
@@ -158,6 +170,7 @@ sub factset_processor {
 				say STDERR BOLD BLACK "$hostname: neighbor $neighbor already visited"
 			}
 			else {
+				$visited_ips{ $neighbor } = 1; #make sure we don't revisit it later
 				new_task( $gearman , $neighbor )
 			}
 		}
