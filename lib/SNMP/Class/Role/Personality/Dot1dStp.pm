@@ -35,6 +35,8 @@ sub get_facts {
 				path_cost => $s->dot1dStpPortPathCost($_->get_instance_oid)->value,
 				designated_cost => $s->dot1dStpPortDesignatedCost($_->get_instance_oid)->value,
 				designated_port => $s->dot1dStpPortDesignatedPort($_->get_instance_oid)->value,
+				designated_port_id => $s->dot1dStpPortDesignatedPort($_->get_instance_oid)->port_id,
+				designated_port_priority => $s->dot1dStpPortDesignatedPort($_->get_instance_oid)->port_priority,
 			},
 		);
 	});

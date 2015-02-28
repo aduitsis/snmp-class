@@ -15,6 +15,7 @@ use SNMP::Class::Varbind::Enum;
 use SNMP::Class::Varbind::Hex_Generic;
 use SNMP::Class::Varbind::MacAddress;
 use SNMP::Class::Varbind::BridgeId;
+use SNMP::Class::Varbind::DesignatedPort;
 use SNMP::Class::Varbind::DisplayHint;
 use SNMP::Class::Varbind::ObjectId;
 use SNMP::Class::Varbind::IpNetToMediaPhysAddress;
