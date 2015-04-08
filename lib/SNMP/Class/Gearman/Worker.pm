@@ -120,7 +120,7 @@ sub gather {
 		$s->prime
 	}
 
-	my $query_all_vlans;
+	my $query_all_vlans = 0;
 	if( exists( $args{ query_all_vlans } ) && $args{ query_all_vlans } ) {
 		$query_all_vlans = 1;
 	}	
