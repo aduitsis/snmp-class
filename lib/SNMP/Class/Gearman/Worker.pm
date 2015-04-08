@@ -120,6 +120,11 @@ sub gather {
 		$s->prime
 	}
 
+	my $query_all_vlans;
+	if( exists( $args{ query_all_vlans } ) && $args{ query_all_vlans } ) {
+		$query_all_vlans = 1;
+	}	
+
 	my $return_json;
 	if( exists( $args{ json } ) && $args{ json } ) {
 		$return_json = 1;
@@ -135,16 +140,31 @@ sub gather {
 	# before we call the vendor method, we make sure that the personality supplying it is there
 
 
-	if( does_role($s , 'SNMP::Class::Role::Personality::VmVlan' ) && ( $s->vendor eq 'cisco' ) ) {
-		my $original_community = $s->community;
-		for( $s->get_vlans ) {
-			$logger->info("doing instance vlan $_ with " . $original_community . '@' . $_);
-
-			$s->change_community( $original_community . '@' . $_ );
-
-			$s->prime( 'Dot1dTpFdbAddress' );
+	if( $s->vendor eq 'cisco' ) {
+		my ( $method, $personality ); 
+		if( $query_all_vlans && does_role( $s , 'SNMP::Class::Role::Personality::VtpVlanState' ) ) { 
+			$method = 'get_vtp_vlans';
+			$personality = 'SNMP::Class::Role::Personality::VtpVlanState';
 		}
-		$s->change_community( $original_community )
+		elsif( does_role( $s , 'SNMP::Class::Role::Personality::VmVlan' ) ) {
+			$method = 'get_vlans';
+			$personality = 'SNMP::Class::Role::Personality::VmVlan';
+		}
+		else {
+			$logger->warn('No available way to query vlans')
+		} 
+			
+		if( $method ) {
+			my $original_community = $s->community;
+			for( $s->$method ) {
+				$logger->info("doing instance vlan $_ with " . $original_community . '@' . $_ . ' using the ' . $method . ' method of ' . $personality );
+
+				$s->change_community( $original_community . '@' . $_ );
+
+				$s->prime( 'Dot1dTpFdbAddress' );
+			}
+			$s->change_community( $original_community )
+		}
 	}
 
 	my $stop_time = time;

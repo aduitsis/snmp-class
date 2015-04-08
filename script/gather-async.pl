@@ -31,10 +31,11 @@ my $quit_program = AnyEvent->condvar;
 
 my $job_servers = [ 'localhost:4730' ];
 my $recurse;
+my $query_all_vlans;
 
 my @seed;
 
-GetOptions( 's=s' => $job_servers , 'r' => \$recurse , 'seed=s' => \@seed );
+GetOptions( 's=s' => $job_servers , 'r' => \$recurse , 'seed=s' => \@seed , 'query-all-vlans' => \$query_all_vlans );
 
 #this starts empty, will get filled up as we move along
 my %visited_ips;
@@ -91,6 +92,17 @@ my $guard = tcp_server 'unix/', "$Bin/control.sock", sub {
 			elsif( $input =~ /^dump.*fact/ ) {
 				say { $fh } join(' ', keys %{$fact_sets} );
 			}
+			elsif( my ($read_var) = ( $input =~ /^\s*get\s*(\S+)\s*/ ) ) {
+				no strict 'refs';
+				say { $fh } "$read_var = ".${ $read_var };
+				use strict 'refs';
+			}	
+			elsif( my ($var,$value) = ( $input =~ /^\s*set\s*(\S+)\s*=\s*(\S+)/ ) ) {
+				say { $fh } "Setting $var to $value";
+				no strict 'refs';
+				${ $var } = $value;
+				use strict 'refs';
+			}	
 			elsif( $input =~ /^(quit|exit)/i ) {
 				$quit_program->send 
 			}
@@ -115,7 +127,7 @@ sub new_task {
 	my $community = shift // 'public';
 	my $timeout = shift // 5000000;
 	say STDERR GREEN "$hostname: adding task";
-	my $task = Dump(  [ hostname => $hostname , community => 'public' , timeout => $timeout, ] );
+	my $task = Dump(  [ hostname => $hostname , community => 'public' , timeout => $timeout , query_all_vlans => $query_all_vlans ] );
 	$gearman->add_task( 'snmp_gather' => $task, 
 		on_complete	=> generate_completion_handler($gearman,$hostname),
 		on_fail		=> generate_failure_handler($hostname),

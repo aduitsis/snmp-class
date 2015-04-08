@@ -14,6 +14,12 @@ our @required_oids = qw( vtpVlanName vtpVlanState vtpVlanType vtpVlanMtu vtpVlan
 
 our @dependencies = qw(SNMP::Class::Role::Personality::Interfaces SNMP::Class::Role::Personality::ManagementDomainName);
 
+sub get_vtp_vlans { 
+	# defined( my $s = shift( @_ ) ) or confess 'incorrect call';
+	$_[0]->vtpVlanState->map( sub {  $_->get_instance_oid->slice(2)->to_number } )
+}
+	
+
 sub get_facts {
 	defined( my $s = shift( @_ ) ) or confess 'incorrect call';
 	$s->vtpVlanState->map(sub {
