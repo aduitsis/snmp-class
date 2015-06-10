@@ -12,11 +12,13 @@ my $builder = Module::Build->new(
 	'Module::Build' => '0',
     },
     requires => {
-	'Class::Std' 	=> 0,
+	'Moose'		=> 0,
 	'SNMP'       	=> 0,
 	'NetSNMP::OID' 	=> 0,
 	'Log::Log4perl' => 0,
+	'Data::Printer' => 0,
 	'version'	=> 0,
+	'YAML'		=> 0,
     },
     recommends => {
 	'Time::HiRes'	=> 0,

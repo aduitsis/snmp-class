@@ -14,6 +14,9 @@ eval {
 	require NetSNMP::OID; 
 	NetSNMP::OID->import();
 };
+if ( $@ ) {
+        $logger->fatal('Error! Cannot load NetSNMP::OID, module is missing')
+}
 $has_netsnmp = ($@)? 0 : 1;
 	
 
@@ -57,7 +60,7 @@ coerce 'OID_ArrayRefOfInts'
 			###DEBUG "$_ converts to ".join(',',@newarr);
 			return \@newarr; 
 		}
-	=> from __PACKAGE__
+	=> from 'SNMP::Class::OID'
 		=> via {
 			return $_->to_arrayref
 		}
