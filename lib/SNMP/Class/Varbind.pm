@@ -6,6 +6,10 @@ our $VERSION = '0.15';
 use Moose;
 #use Moose::Util::TypeConstraints;
 
+# apply the serializable role, which adds the
+# serialize method and the unserialize function
+with 'SNMP::Class::Role::Serializable';
+
 use SNMP;
 use Carp;
 use Log::Log4perl qw(:easy);
@@ -149,7 +153,7 @@ sub to_varbind_string {
 
 
 =cut
-	
+
 
 #You get an SNMP::Varbind. Warning, you only get the correct oid, but you shouldn't get types,values,etc. 
 sub generate_netsnmpvarbind {

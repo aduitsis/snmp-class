@@ -3,6 +3,8 @@ use warnings;
 use strict;
 use Test::More qw(no_plan);
 
+use Moose::Util qw/find_meta does_role search_class_by_role/;
+
 BEGIN {
 	use Data::Dumper;
 	use Carp;
@@ -28,6 +30,8 @@ isa_ok($a,"SNMP::Class");
 my $r = $a->bulk('ifTable');
 
 isa_ok($r,'SNMP::Class::ResultSet');
+
+ok( does_role($r , 'SNMP::Class::Role::Serializable') , 'object is serializable' );
 
 $r = $a->snmpgetnext(SNMP::Class::OID->new('sysDescr.0'));
 

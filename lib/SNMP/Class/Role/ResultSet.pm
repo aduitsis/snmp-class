@@ -38,6 +38,8 @@ my $logger = get_logger();
 #	'+' => \&plus,
 #	fallback => 1;
 
+with 'SNMP::Class::Role::Serializable';
+
 
 subtype 'ArrayRefofVarbinds' => as 'ArrayRef[SNMP::Class::Varbind]';
 has 'varbinds' => (
