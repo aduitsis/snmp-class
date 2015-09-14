@@ -9,6 +9,8 @@ use Moose;
 use YAML qw(freeze thaw);
 use JSON;
 
+with 'SNMP::Class::Role::Serializable';
+
 has 'type' => (
 	is => 'ro',
 	isa => 'Str',
@@ -33,10 +35,10 @@ sub to_string {
 	$_[0]->type . ' ' . join(' ',map { '(' . $_ . ' "'. quote_str($_[0]->slots->{$_}) . '")' } ( sort keys %{ $_[0]->slots } ) ) ;
 }
 
-sub serialize {
-	#freeze( { type => $_[0]->type , slots => $_[0]->slots } )
-	freeze( $_[0] );
-}
+#sub serialize {
+#	#freeze( { type => $_[0]->type , slots => $_[0]->slots } )
+#	freeze( $_[0] );
+#}
 
 sub TO_JSON {
 	encode_json { type => $_[0]->type , slots => $_[0]->slots } 
@@ -48,11 +50,11 @@ sub FROM_JSON {
 	return __PACKAGE__->new( type => $data->{type} , slots => $data->{slots} );
 }
 
-sub unserialize {
-	#my $items = thaw( $_[0] );
-	#return __PACKAGE__->new( type => $items->{type} , slots => $items->{slots} );
-	thaw( $_[0] );
-}
+#sub unserialize {
+#	#my $items = thaw( $_[0] );
+#	#return __PACKAGE__->new( type => $items->{type} , slots => $items->{slots} );
+#	thaw( $_[0] );
+#}
 
 sub keys {
 	return ( keys %{ $_[0]->slots } )
