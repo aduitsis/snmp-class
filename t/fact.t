@@ -69,7 +69,7 @@ ok( $f1->matches( $f5 ), 'json serialize and deserialize using TO_JSON and const
 
 
 $json = $f0->TO_JSON;
-is($json,'{"type":"test1","slots":{}}','serialize object to json');
+ok( ( grep { $json eq $_ } ('{"type":"test1","slots":{}}','{"slots":{},"type":"test1"}') ) ,'serialize object to json');
 $f4 = SNMP::Class::Fact::FROM_JSON( $json );
 $f5 = SNMP::Class::Fact->new( json => $json );
 isa_ok($f4,'SNMP::Class::Fact');
