@@ -46,6 +46,8 @@ use SNMP::Class::Role::Implementation::NetSNMP;
 
 use SNMP::Class::Role::Personality;
 
+use SNMP::Class::Role::Cache;
+
 #setup logging
 use Log::Log4perl;
 
@@ -118,6 +120,12 @@ has 'create_time' => (
 	default => sub { time },
 );
 
+has 'cacheable' => ( 
+	is => 'ro',
+	isa => 'Bool',
+	default => 0,
+);
+
 my (%session,%name,%version,%community,%deactivate_bulkwalks);
 
 
@@ -147,6 +155,9 @@ sub BUILD {
 
 		# also make it a generic personality with facts
 		SNMP::Class::Role::Personality->meta->apply($_[0]);
+
+		#also make it cacheable
+		SNMP::Class::Role::Cache->plugin_meta->apply($_[0]) if $_[0]->cacheable ;
 
 		$_[0]->create_session;
 
