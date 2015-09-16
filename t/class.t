@@ -48,5 +48,5 @@ ok( $a->create_time =~ /^\d+$/ , 'create_time returns a number' );
 #$r = $a->walk('.1');
 $a = SNMP::Class->new(hostname=>'localhost',cacheable=>1);
 isa_ok($a,"SNMP::Class");
-ok( $a->save , 'has save method' ) ; 
-ok( $a->load , 'has load method' ) ; 
+ok( $a->can('save') , 'has save method' ) ; 
+ok( $a->can('load') , 'has load method' ) ; 

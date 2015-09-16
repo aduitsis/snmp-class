@@ -34,7 +34,7 @@ sub import {
 	no strict 'refs';
 	Sub::Install::install_sub({
 		code => sub { 
-			print STDERR "plugin is $plugin\n";
+			#### print STDERR "plugin is $plugin\n";
 			# TODO I must find a better way to say the following: 
 			&{ $plugin.'::meta' }( $plugin );
 		} ,
