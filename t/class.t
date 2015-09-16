@@ -40,6 +40,7 @@ isa_ok($r,'SNMP::Class::Varbind');
 $r = $a->walk('system');
 
 #print $r->dump;
+ok( $a->create_time =~ /^\d+$/ , 'create_time returns a number' );
 
 
 #print $r->dump;
