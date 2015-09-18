@@ -25,5 +25,5 @@ my $builder = Module::Build->new(
     },
     add_to_cleanup      => [ 'SNMP::Class-*' ],
 );
-
+$builder->add_build_element('logger');
 $builder->create_build_script();

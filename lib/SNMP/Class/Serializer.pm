@@ -1,17 +1,16 @@
-package SNMP::Class::Role::Serializable;
+package SNMP::Class::Serializer;
 
-use Log::Log4perl;
+use Carp; 
+
+use Log::Log4perl qw(:nowarn);
 my $logger = Log::Log4perl::get_logger();
 
 use Module::Load;
 use Module::Load::Conditional qw[can_load check_install requires];
 
-# this is a role 
-use Moose::Role;
+my $can_serialize;
 
-my $serializable;
-
-sub serializable { $serializable }
+sub can_serialize { $can_serialize }
 
 my $error_sub = sub { 
 	my $message = 'Cannot find a suitable serialization module. Please install Sereal.';
@@ -19,14 +18,14 @@ my $error_sub = sub {
 	die $message;
 };
 
-my ( $serialize_sub , $unserialize_sub ) = ( $error_sub , $error_sub ); 
+my ( $encode_sub , $decode_sub ) = ( $error_sub , $error_sub ); 
 
 if ( can_load( modules => { 
 	'Sereal::Encoder' => undef , 
 	'Sereal::Decoder' => undef , 
 })) { 
 
-	$serializable = 1;
+	$can_serialize = 1;
 
 	$logger->info('Found installed Sereal module') ;
 
@@ -36,27 +35,21 @@ if ( can_load( modules => {
 	my $encoder = Sereal::Encoder->new({});
 	my $decoder = Sereal::Decoder->new({});
 
-	$serialize_sub = sub { $encoder->encode( $_[0] ) };
-	$unserialize_sub = sub {  
-		# if this function has been invoked using the -> notation, e.g.
-		# SNMP::Class::Varbind->new_from_sereal( $whatever ), try to
-		# detect and act accordingly:
-		if( defined( $_[1] ) ) {
-			return $decoder->decode( $_[0] )
-		}
-		$decoder->decode( $_[0] )
-	};
+	# this function is invoked using the -> notation, e.g.
+	# SNMP::Class::Serializer->encode( $whatever )
+	$encode_sub = sub { $encoder->encode( $_[1] ) };
+	$decode_sub = sub { $decoder->decode( $_[1] ) }; 
 } 
 
 Sub::Install::install_sub({
 	into	=> __PACKAGE__,
-	as	=> 'serialize',
-	code => $serialize_sub, 
+	as	=> 'encode',
+	code => $encode_sub, 
 });
 Sub::Install::install_sub({
 	into	=> __PACKAGE__,
-	as	=> 'unserialize',
-	code => $unserialize_sub, 
+	as	=> 'decode',
+	code => $decode_sub, 
 });
 	
 1;

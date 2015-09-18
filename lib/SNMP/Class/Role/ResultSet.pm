@@ -1,5 +1,7 @@
 package SNMP::Class::Role::ResultSet;
 
+use v5.14;
+
 =head1 NAME
 
 SNMP::Class::Role::ResultSet - A set of L<SNMP::Class::Varbind> objects. 
@@ -26,8 +28,10 @@ use Carp;
 use SNMP::Class;
 use Moose::Role;
 use Moose::Util::TypeConstraints;
+use Moose::Util qw/find_meta does_role search_class_by_role/;
 use Data::Dumper;
-use Log::Log4perl qw(:easy);
+use SNMP::Class::Serializer;
+use Log::Log4perl qw(:easy :nowarn);
 my $logger = get_logger();
 
 # deactivated because the . could cause strange side effects when accidentally trying to print 
@@ -37,8 +41,6 @@ my $logger = get_logger();
 #	'.' => \&dot,
 #	'+' => \&plus,
 #	fallback => 1;
-
-with 'SNMP::Class::Role::Serializable';
 
 
 subtype 'ArrayRefofVarbinds' => as 'ArrayRef[SNMP::Class::Varbind]';
@@ -74,6 +76,40 @@ only do so when called in scalar context. They return
 the list of varbinds in list context.
 
 =over 4
+
+=item B<copy( other_resultset )>
+
+Use the contents of the other resultset as our own. This will not copy the
+contents, but it will rather copy the references to the other_resultset's
+attributes. So this operation should be pretty fast compared to getting all the
+varbinds of the other_resultset and push them one by one. 
+
+=cut
+
+sub copy { 
+	my $self = shift // die 'incorrect call';
+	my $other = shift // die  'incorrect call';
+	for my $item ( qw( varbinds _fulloid_index _label_index _instance_index)) { 
+		$self->$item( $other->$item ) ;
+	}	
+}
+
+sub serialize_resultset { 
+	my $self = shift // die 'incorrect call';
+	my $varbinds = [ map { $_->serialize } @{ $self->varbinds } ];
+	SNMP::Class::Serializer->encode( $varbinds )
+}
+
+sub unserialize_resultset { 
+	my $self = shift // die 'incorrect call';
+	does_role( $self , 'SNMP::Class::Role::ResultSet' ) 
+		or confess 'target object must be a resultset';
+	my $blob = shift // die 'missing blob';
+	my $arrayref = SNMP::Class::Serializer->decode( $blob ) ; 
+	my @varbinds = map { SNMP::Class::Varbind->unserialize( $_ ) } @{ $arrayref } ; 
+	$self->push( @varbinds ) ; 
+}
+
 
 =item B<new>
 

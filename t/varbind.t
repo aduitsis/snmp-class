@@ -55,7 +55,7 @@ ok($v7->to_varbind_string eq 'End of MIB','End of mib to_varbind_string');
 
 
 my $blob = $v4->serialize;
-my $v444 = SNMP::Class::Varbind::unserialize( $blob ) ; 
+my $v444 = SNMP::Class::Varbind->unserialize( $blob ) ; 
 isa_ok( $v444 , 'SNMP::Class::Varbind', 'an unserialized object' ) ;
 is( $v4->numeric , $v444->numeric , 'Same OID before and after serialization' ) ; 
 is( $v4->raw_value , $v444->raw_value , 'Same value before and after serialization');

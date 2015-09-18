@@ -31,10 +31,13 @@ To use anything in the SNMP::Class package, use this module and everything else 
 use Moose;
 use Moose::Util::TypeConstraints;
 
-
 #some common modules...
 use Carp;
 use Data::Dumper;
+
+# we will need this to produce the unique id
+use Digest::SHA1 qw(sha1_hex);
+
 
 #load our own
 use SNMP::Class::ResultSet;
@@ -46,10 +49,9 @@ use SNMP::Class::Role::Implementation::NetSNMP;
 
 use SNMP::Class::Role::Personality;
 
-use SNMP::Class::Role::Cache;
 
 #setup logging
-use Log::Log4perl;
+use Log::Log4perl qw(:nowarn);
 
 # try to find a universal.logger in the same path with this file
 for my $lib (@INC) {
@@ -58,6 +60,11 @@ for my $lib (@INC) {
 		Log::Log4perl->init($logger_file);
 	} 
 }
+
+my $logger = Log::Log4perl->get_logger;
+
+use SNMP::Class::Serializer;
+use SNMP::Class::Role::Cache;
 
 ####&SNMP::loadModules('ALL');
 
@@ -114,17 +121,19 @@ has 'retries' => (
 	default => 5, 
 );
 
-has 'create_time' => (
-	is => 'ro',
-	isa => 'Num',
-	default => sub { time },
-);
-
 has 'cacheable' => ( 
 	is => 'ro',
 	isa => 'Bool',
 	default => 0,
 );
+
+
+sub unique_id { 
+	sha1_hex( join(':',( $_[0]->hostname, $_[0]->community, $_[0]->port,)) ) 
+}
+
+#sub serialize { 
+#	SNMP::Class::Serializer( { resultset => $_[0]->serialize_resultset , cache => g
 
 my (%session,%name,%version,%community,%deactivate_bulkwalks);
 
@@ -157,7 +166,14 @@ sub BUILD {
 		SNMP::Class::Role::Personality->meta->apply($_[0]);
 
 		#also make it cacheable
-		SNMP::Class::Role::Cache->plugin_meta->apply($_[0]) if $_[0]->cacheable ;
+		if ( $_[0]->cacheable ) { 
+			$logger->debug('applying cacheable role to object');
+			SNMP::Class::Role::Cache->plugin_apply( $_[0] ) ; 
+			#if( $_[0]->cache_exists ) { 
+			#	my $object = $_[0]->load;
+			#	$_[0]->copy( $object ) ; 
+			#}
+		}
 
 		$_[0]->create_session;
 

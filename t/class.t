@@ -31,8 +31,6 @@ my $r = $a->bulk('ifTable');
 
 isa_ok($r,'SNMP::Class::ResultSet');
 
-ok( does_role($r , 'SNMP::Class::Role::Serializable') , 'object is serializable' );
-
 $r = $a->snmpgetnext(SNMP::Class::OID->new('sysDescr.0'));
 
 isa_ok($r,'SNMP::Class::Varbind');
@@ -40,13 +38,13 @@ isa_ok($r,'SNMP::Class::Varbind');
 $r = $a->walk('system');
 
 #print $r->dump;
-ok( $a->create_time =~ /^\d+$/ , 'create_time returns a number' );
+#ok( $a->create_time =~ /^\d+$/ , 'create_time returns a number' );
 
 
 #print $r->dump;
 
 #$r = $a->walk('.1');
-$a = SNMP::Class->new(hostname=>'localhost',cacheable=>1);
-isa_ok($a,"SNMP::Class");
-ok( $a->can('save') , 'has save method' ) ; 
-ok( $a->can('load') , 'has load method' ) ; 
+#$a = SNMP::Class->new(hostname=>'localhost',cacheable=>1);
+#isa_ok($a,"SNMP::Class");
+#ok( $a->can('save') , 'has save method' ) ; 
+#ok( $a->can('load') , 'has load method' ) ; 

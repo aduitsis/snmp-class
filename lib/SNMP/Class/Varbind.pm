@@ -8,7 +8,7 @@ use Moose;
 
 # apply the serializable role, which adds the
 # serialize method and the unserialize function
-with 'SNMP::Class::Role::Serializable';
+use SNMP::Class::Serializer;
 
 use SNMP;
 use Carp;
@@ -167,7 +167,14 @@ sub register_plugin {
 	push @plugins,($_[0]);
 }
 	
-	
+
+sub serialize {
+	SNMP::Class::Serializer->encode( $_[0] )
+}
+
+sub unserialize { 
+	SNMP::Class::Serializer->decode( $_[1] ) 
+}
 
 
 =head1 AUTHOR
