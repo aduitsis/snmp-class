@@ -5,9 +5,9 @@ use Test::More qw(no_plan);
 use Moose::Util qw/find_meta does_role search_class_by_role/;
 
 BEGIN {
-        use Data::Dumper;
-        use Carp;
-        use_ok("SNMP::Class");
+	use Data::Dumper;
+	use Carp;
+	use_ok("SNMP::Class");
 }
 
 
@@ -35,3 +35,9 @@ my $d = SNMP::Class::ResultSet->new;
 $d->unserialize_resultset( $s->serialize_resultset ) ; 
 
 is( $d->number_of_items , 1 , 'Unserialized Resultset contains one varbind');
+
+
+$d->empty;
+is( $d->number_of_items , 0 , 'After empty(), resultset contains no varbinds');
+ok( $d->is_empty  , 'After empty(), resultset contains no varbinds');
+

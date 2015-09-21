@@ -127,13 +127,29 @@ has 'cacheable' => (
 	default => 0,
 );
 
+has 'create_time' => (
+	is => 'rw',
+	isa => 'Num',
+	default => sub { time },
+);
+
 
 sub unique_id { 
 	sha1_hex( join(':',( $_[0]->hostname, $_[0]->community, $_[0]->port,)) ) 
 }
 
-#sub serialize { 
-#	SNMP::Class::Serializer( { resultset => $_[0]->serialize_resultset , cache => g
+sub serialize { 
+	SNMP::Class::Serializer->encode({ resultset => $_[0]->serialize_resultset, create_time => $_[0]->create_time });
+}
+
+sub unserialize { 
+	my $self = shift // die 'incorrect call';
+	my $blob = shift // die 'missing blob';
+	my $ref = SNMP::Class::Serializer->decode( $blob ) ; 
+	$self->create_time( $ref->{create_time} );
+	$self->empty; # there shouldn't be any varbinds inside 
+	$self->unserialize_resultset( $ref->{ resultset } );
+}	
 
 my (%session,%name,%version,%community,%deactivate_bulkwalks);
 
@@ -169,15 +185,10 @@ sub BUILD {
 		if ( $_[0]->cacheable ) { 
 			$logger->debug('applying cacheable role to object');
 			SNMP::Class::Role::Cache->plugin_apply( $_[0] ) ; 
-			#if( $_[0]->cache_exists ) { 
-			#	my $object = $_[0]->load;
-			#	$_[0]->copy( $object ) ; 
-			#}
+			return if $_[0]->revive 
 		}
 
 		$_[0]->create_session;
-
-
 }
 
 sub add {

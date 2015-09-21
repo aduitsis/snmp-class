@@ -30,6 +30,7 @@ use Moose::Role;
 use Moose::Util::TypeConstraints;
 use Moose::Util qw/find_meta does_role search_class_by_role/;
 use Data::Dumper;
+use Data::Printer;
 use SNMP::Class::Serializer;
 use Log::Log4perl qw(:easy :nowarn);
 my $logger = get_logger();
@@ -94,11 +95,29 @@ sub copy {
 	}	
 }
 
+
+=item B<serialize_resultset>
+
+Serialize the contents of the resultset and return the result. The serializer 
+actually used to achieve is defined by the mechanisms inside 
+L<SNMP::Class::Serializer>, which will try to find an appropriate 
+installed module and use it. 
+
+=cut
+
 sub serialize_resultset { 
 	my $self = shift // die 'incorrect call';
 	my $varbinds = [ map { $_->serialize } @{ $self->varbinds } ];
 	SNMP::Class::Serializer->encode( $varbinds )
 }
+
+=item B<unserialize_resultset>
+
+Takes as argument the return value of a serialize_resultset method call,
+will try to decode the serialized contents and add them to the already
+existing varbinds inside the present object
+
+=cut
 
 sub unserialize_resultset { 
 	my $self = shift // die 'incorrect call';
@@ -110,6 +129,17 @@ sub unserialize_resultset {
 	$self->push( @varbinds ) ; 
 }
 
+=item B<empty>
+
+Empties the resultset.
+
+=cut
+sub empty {
+	$_[0]->varbinds( [] );
+	$_[0]->_fulloid_index( {} );
+	$_[0]->_label_index( {} );
+	$_[0]->_instance_index( {} );
+}
 
 =item B<new>
 

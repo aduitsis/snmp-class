@@ -53,7 +53,7 @@ sub save {
 sub load {
 	my $self = shift // die 'incorrect call';
 	$logger->info('loading '.$self->file_name);
-	#SNMP::Class->unserialize( $self->cache_file->all ) 
+	$self->unserialize( $self->cache_file->all )
 }
 
 1;

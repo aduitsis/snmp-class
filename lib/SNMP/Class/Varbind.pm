@@ -173,7 +173,7 @@ sub serialize {
 }
 
 sub unserialize { 
-	SNMP::Class::Serializer->decode( $_[1] ) 
+	bless SNMP::Class::Serializer->decode( $_[1] ) , 'SNMP::Class::Varbind'
 }
 
 
