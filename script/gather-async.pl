@@ -55,9 +55,26 @@ my $gearman = connect_to_gearman ;
 #new_task( $gearman , $host );
 
 my $fact_sets = { } ;
-my $watchers;
-my $guard = tcp_server 'unix/', "$Bin/control.sock", sub { 
-	p $watchers;
+my %watchers;
+my $guard = tcp_server 'unix/', "$Bin/control.sock", \&control_handler; 
+
+
+my $alert_condvar = AnyEvent->condvar;
+$alert_condvar->cb( \&alert_handler ) ; 
+
+sub alert_handler {
+	my @args = $_[0]->recv // die 'incorrect call';
+	for my $watcher ( values %watchers ) {
+		if ( $watcher->{ alerts } ) {
+			say { $watcher->{ fh } } $args[0];
+		}
+	}
+	$alert_condvar = AnyEvent->condvar;
+	$alert_condvar->cb( \&alert_handler ) ; 
+}
+
+sub control_handler { 
+	p %watchers;
 	my ($fh) = @_;
 	binmode( $fh, ":unix" );
 	### say { $fh } "Hello, ready to accept commands";
@@ -70,14 +87,15 @@ my $guard = tcp_server 'unix/', "$Bin/control.sock", sub {
 			### p @_;
 			### warn "io event <$_[0]>\n";
 			my $input = <$fh> // do { 
-				delete $watchers->{ $fh };
+				delete $watchers{ $fh };
 				say STDERR "client closed the connection";
 				return
 			};
 			chomp $input;
 			if( my ( $target ) = ( $input =~ /^(?:add|walk|target)\s+(\S+)$/ ) ) {
 				say { $fh } "Asked to query $target";
-				new_task( $gearman , $target )	
+				new_task( $gearman , $target );
+				$alert_condvar->send("job submitted for $target");
 			}
 			elsif( my ( $query ) = ( $input =~ /^info\s+(\S+)$/ ) ) {
 				if( $fact_sets->{ $query } ) { 
@@ -90,7 +108,7 @@ my $guard = tcp_server 'unix/', "$Bin/control.sock", sub {
 				}
 			}
 			elsif( $input =~ /^dump.*fact/ ) {
-				say { $fh } join(' ', keys %{$fact_sets} );
+				say { $fh } join("\n", keys %{$fact_sets} );
 			}
 			elsif( my ($read_var) = ( $input =~ /^\s*get\s*(\S+)\s*/ ) ) {
 				no strict 'refs';
@@ -106,16 +124,25 @@ my $guard = tcp_server 'unix/', "$Bin/control.sock", sub {
 			elsif( $input =~ /^(quit|exit)/i ) {
 				$quit_program->send 
 			}
+			elsif( $input =~ /^(no\s+term\S*\s+mon|term\S*\s+no\s+mon|alert\S*\s+off)/i ) {
+				$watchers{ $fh }->{ alerts } = 0;
+			}
+			elsif( $input =~ /^(term\S*\s+mon|alert\S*\s+on)/i ) {
+				$watchers{ $fh }->{ alerts } = 1;
+			}
+			elsif( $input =~ /^\s*$/ ) {
+			}
 			else { 
 				say { $fh } "My apologies, I don't know how to $input"
 			}
 			print { $fh } 'omnidisco> ';
 		}
 	);
-	$watchers->{ $fh } = $io_watcher
-};
+	$watchers{ $fh } = { fh => $fh , aio => $io_watcher , alerts => 1 } ; 
+}
 
 
+#this is done only once, upon program invocation
 new_task( $gearman, $_ ) for(@seed);
 
 ### $taskset->wait;
@@ -143,7 +170,8 @@ sub generate_completion_handler {
 		say STDERR GREEN "$hostname: gather completed";
 		my $fact_set = SNMP::Class::FactSet::Simple::unserialize( $_[1] ) ;
 		factset_processor( $gearman , $hostname, $fact_set ) ; 
-		say STDERR GREEN "$hostname: processing completed"
+		say STDERR GREEN "$hostname: processing completed";
+		$alert_condvar->send("job completed for $hostname");
 		
 	}
 }
