@@ -127,7 +127,7 @@ sub new_task {
 	my $community = shift // 'public';
 	my $timeout = shift // 5000000;
 	say STDERR GREEN "$hostname: adding task";
-	my $task = Dump(  [ hostname => $hostname , community => 'public' , timeout => $timeout , query_all_vlans => $query_all_vlans ] );
+	my $task = Dump(  [ hostname => $hostname , community => 'public' , timeout => $timeout , query_all_vlans => ($query_all_vlans? 1 : 0 ) ] );
 	$gearman->add_task( 'snmp_gather' => $task, 
 		on_complete	=> generate_completion_handler($gearman,$hostname),
 		on_fail		=> generate_failure_handler($hostname),

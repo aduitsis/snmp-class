@@ -27,7 +27,7 @@ sub get_facts {
 	# following call returns array of SNMP::Class::Facts
         $s->ipNetToMediaPhysAddress->map(sub {
                 if($s->has_exact('ipNetToMediaType',$_->get_instance_oid)) {    
-                        SNMP::Class::Fact->new(
+                        return SNMP::Class::Fact->new(
 				type => 'arp_table',
                                 slots => {
 					system => $s->sysname,
@@ -39,6 +39,9 @@ sub get_facts {
 				},
                         );
                 }
+		else {
+			return
+		}
         });
 }
 

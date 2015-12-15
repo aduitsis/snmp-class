@@ -92,6 +92,7 @@ sub calculate_facts {
 	no strict 'refs';
 	for my $role ( @plugins ) {
 		if( does_role( $_[0] , $role ) ) {
+			INFO "Getting facts from role $role";
 			eval { 
 				$_[0]->fact_set->push( &{ $role . '::get_facts' }( $_[0] ) );
 			};

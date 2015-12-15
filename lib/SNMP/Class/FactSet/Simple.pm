@@ -37,7 +37,7 @@ sub push {
 	defined( my $self = shift( @_ ) ) or confess 'incorrect call';
 	for( @_ ) {
 		if( !( blessed $_  && $_->isa('SNMP::Class::Fact') ) ) { 
-			$logger->logconfess('Cannot push something that is not an SNMP::Class::Fact')
+			$logger->logconfess("Cannot push something that is not an SNMP::Class::Fact. Dumping offending object: \n=====\n".p($_)."\n======\n")
 		}
 	}
 	push @{ $self->fact_set	} , @_;
