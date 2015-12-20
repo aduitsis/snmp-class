@@ -33,6 +33,10 @@ sub facts {
 	$_[0]->fact_set;
 }
 
+sub each {
+	$_[1]->( $_ ) for ( @{ $_[0]->fact_set } )
+}
+
 sub push { 
 	defined( my $self = shift( @_ ) ) or confess 'incorrect call';
 	for( @_ ) {

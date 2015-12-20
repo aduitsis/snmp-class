@@ -9,58 +9,88 @@ use SNMP::Class::Rete::Instantiation;
 
 use Moose;
 
-my $fact_counter = 1;
+my $fact_counter;
+my $rule_counter;
+my $alpha_counter;
 
-has 'fact_set' => (
-	is => 'ro',
-	writer => '_set_fact_set',
-	isa => 'SNMP::Class::FactSet::Simple',
-	required => 1,
+has 'original_fact_set' => (
+	is		=> 'ro',
+	writer		=> '_set_original_fact_set',
+	isa		=> 'SNMP::Class::FactSet::Simple',
 );
 
-has 'rules' => (
-	is => 'ro',
-	isa => 'ArrayRef[SNMP::Class::Rete::Rule]',
-	required => 0,
+# contains the known facts
+has 'fact_set'	=> (
+	is		=> 'ro',
+	writer		=> '_set_fact_set',
+	isa		=> 'SNMP::Class::FactSet::Simple',
+	default		=> sub { SNMP::Class::FactSet::Simple->new },
 );
 
-has 'index' => (
-	is => 'ro',
-	isa => 'HashRef[Str]',
-	default => sub { {} },
+# an array containing the production rules of the Rete
+has 'rules'	=> (
+	is		=> 'ro',
+	isa		=> 'ArrayRef[SNMP::Class::Rete::Rule]',
+	required	=> 0,
+	default		=> sub{ [] },
 );
 
-sub BUILD {
-	# we will be working with a copy of the original factset
-	$_[0]->_set_fact_set( $_[0]->fact_set->clone )
+# a hash (indexed by fact type) containing all the instantiations 
+# of facts. Each instatiation corresponds to a specific alpha node
+has 'alphas'	=> (
+	is	=> 'ro',
+	isa	=> 'HashRef[Str]',
+	default	=> sub { {} },
+);
+
+sub BUILDARGS { 
+	my $class = shift // die 'missing class argument';
+	if( @_ == 1 ) {
+	        return { original_fact_set => shift };
+	}
+	else {
+		my %args = @_;
+		$args{ original_fact_set } = $args{ fact_set } if exists $args{ fact_set };
+		delete $args{ fact_set } ; 
+	        $class->SUPER::BUILDARGS( %args );
+	}
 }
 
+sub BUILD {
+	# initialize alphas here
+	# initialize rules here
+	$_[0]->reset
+}
+	
 sub reset {
+	# the original_fact_set was pointing to the same structure as fact_set
+	# now, we clone the original_fact_set and put it in fact_set
+	# so we can safely modify fact_set without disturbing the original structure
 	my $self = shift // die 'incorrect call';
-	$self->insert_fact( @{ $self->fact_set->facts } )
+	$self->_set_fact_set( SNMP::Class::FactSet::Simple->new ) ; 
+	$fact_counter = 0;
 }
 
 sub run {
-	say 'run'
+	my $self = shift // die 'incorrect call';
+	#$self->fact_set->each(sub { 
+		#$self->insert_fact( $_ ) 
+	#});
+	$self->original_fact_set->each( sub { 
+		$self->insert_fact( $_ )
+	});
 }
 
 sub insert_fact {
 	my $self = shift // die 'incorrect call';
-
 	for my $fact ( @_ ) {
-		if( exists $self->index->{ $fact->type } ) {
-			for my $alpha ( @{ $self->index->{ $fact->type } } ) {
-				my $inst = $alpha->instantiate_with_fact( $fact_counter++ => $fact );
+		$self->fact_set->push( $fact ); 
+		$fact_counter++;
+		if( exists $self->alphas->{ $fact->type } ) {
+			for my $alpha ( @{ $self->alphas->{ $fact->type } } ) {
+				my $inst = $alpha->instantiate( $fact );
 			}
 		}
-	}
-}
-
-sub insert_alpha {
-	my $self = shift // die 'incorrect call';
-
-	for my $alpha ( @_ ) {
-		push @{ $self->index->{ $alpha->type } },$alpha;
 	}
 }
 
@@ -68,11 +98,12 @@ sub insert_rule {
 	my $self = shift // die 'incorrect call';
 	for my $rule ( @_ ) {
 		push @{ $self->rules }, $rule;
+		for my $alpha ( keys %{ $rule->alphas } ) {
+			if( ! exists $self->alphas->{ $alpha } ) {
+				push @{ $self->alphas->{ $rule->alphas->{$alpha}->type } } , $rule->alphas->{ $alpha };
+			}
+		}
 	}
-
 }
-
-
-
 
 1;
