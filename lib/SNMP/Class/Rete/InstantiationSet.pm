@@ -56,4 +56,20 @@ sub each_inst {
 	$code->() for ( values %{ $self->instantiations } )
 }
 
+sub send {
+	my $self	= shift // die 'incorrect call';
+	my $recipient	= shift // die 'missing recipient';
+	my $msg		= shift // die 'missing message';
+	$recipient->receive_handler( $self->unique_id , $msg );
+}	
+
+sub receive_handler {
+	my $self	= shift // die 'incorrect call';
+	my $sender	= shift // die 'missing recipient';
+	my $msg		= shift // die 'missing message';
+
+	$self->receive( $sender , $msg );
+}
+	
+
 1;

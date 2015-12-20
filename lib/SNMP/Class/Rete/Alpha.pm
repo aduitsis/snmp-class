@@ -69,8 +69,9 @@ sub instantiate {
 		my $instantiation = SNMP::Class::Rete::Instantiation->new( $result );
 		$self->push_inst( $instantiation );
 		
-		for my $rule ( keys %{ $self->rules } ) {
-			$self->rules->{ $rule }->trigger( $self->unique_id , $instantiation );
+		for my $rule ( values %{ $self->rules } ) {
+			#$self->rules->{ $rule }->receive( $self->unique_id , $instantiation );
+			$self->send( $rule , $instantiation ); 
 		}
 
 		return $instantiation;

@@ -42,18 +42,18 @@ sub add_alpha {
 	$alpha->point_to_rule( $self ) ; 
 }
 
-sub trigger { 
+sub receive { 
 	my $self		= shift // die 'incorrect call';
-	my $alpha_trigger	= shift // die 'missing alpha';
-	my $inst_trigger	= shift // die 'missing instantiation';
+	my $sender		= shift // die 'missing alpha';
+	my $msg			= shift // die 'missing instantiation';
 
 	my @result;
 	for my $alpha_name ( keys %{ $self->alphas } ) {
-		next if $alpha_trigger eq $alpha_name;	
-		my $alpha_ref = $self->alphas->{ $alpha_name };
+		next if $sender eq $alpha_name;	
+		my $alpha = $self->alphas->{ $alpha_name };
 		#for my $test_inst ( @{ $alpha_ref->instantiations } ) {
-		$alpha_ref->each_inst( sub { 
-			my $new_inst = $inst_trigger->combine( $_ ) // next;
+		$alpha->each_inst( sub { 
+			my $new_inst = $msg->combine( $_ ) // next;
 			push @result,$new_inst;
 			$self->push_inst( $new_inst );
 			$self->rh->( $new_inst ); 
