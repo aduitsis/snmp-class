@@ -12,12 +12,18 @@ use Carp;
 use Log::Log4perl qw(:easy);
 my $logger = get_logger();
 
-has 'instantiations' => (
+has instantiations => (
 	is		=> 'ro',
 	writer		=> '_set_instantiations',
 	isa		=> 'HashRef[SNMP::Class::Rete::Instantiation]',
 	required	=> 0,
-	default		=> sub{ {} },
+	default		=> sub { {} },
+);
+
+has messages => (
+	is		=> 'ro',
+	isa		=> 'HashRef[HashRef]',
+	default		=> sub { { received => {} , sent => {} } },
 );
 
 sub empty_insts {
@@ -56,20 +62,50 @@ sub each_inst {
 	$code->() for ( values %{ $self->instantiations } )
 }
 
+# this is called on the sending side
 sub send {
 	my $self	= shift // die 'incorrect call';
 	my $recipient	= shift // die 'missing recipient';
 	my $msg		= shift // die 'missing message';
+
 	$recipient->receive_handler( $self->unique_id , $msg );
+	
+	$self->store( 'sent' , $recipient->unique_id , $msg );
 }	
 
+# this is called on the receiving side
 sub receive_handler {
 	my $self	= shift // die 'incorrect call';
-	my $sender	= shift // die 'missing recipient';
+	my $sender_id	= shift // die 'missing sender_id';
 	my $msg		= shift // die 'missing message';
 
-	$self->receive( $sender , $msg );
+	# we could use the receive return value to decide whether to store or not
+	$self->receive( $sender_id , $msg );
+
+	$self->store( 'received' , $sender_id , $msg );
 }
+
+sub store {
+	my $self	= shift // die 'incorrect call';
+	my $type	= shift // die 'missing type, sent or received';
+	my $id		= shift // die 'missing recipient';
+	my $msg		= shift // die 'missing message';
+
+	exists $self->messages->{ $type }->{ $id }->{ $msg->signature } 
+	or
+	$self->messages->{ $type }->{ $id }->{ $msg->signature } = $msg
+}	
+
+# this will search for messages of type $type
+# and try to filter id by using $filter->() (default: filter excludes only $id, keeps rest)
+# and then return all the instantiations in each of the rest of the values
+sub search_messages {
+	my $self	= shift // die 'incorrect call';
+	my $type	= shift // die 'missing type, sent or received';
+	my $not_id	= shift // die 'missing recipient';
+	my $filter	= shift // sub { $_ ne $not_id };
 	
+	map { values %{ $self->messages->{ $type }->{ $_ } } } grep { $filter->() } keys %{ $self->messages->{ $type } } 
+}
 
 1;
