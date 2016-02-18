@@ -4,6 +4,7 @@ use Log::Log4perl qw(:easy :nowarn);
 my $logger = get_logger();
 
 use Scalar::Util;
+use List::Util qw(none);
 
 use Moose;
 use YAML qw(freeze thaw);
@@ -31,8 +32,27 @@ sub quote_str {
 	$_[0]
 }
 
+=head2 to_string( [ exclude => 'slotname' | exclude =>['slot1','slot2',...] ] )
+
+Returns a string representation of the fact, quoting values of slots as necessary. The exclude
+argument can be used to ask for the exclusion of slot(s) name(s) from the string. The value of the 
+exclude argument can be either a scalar value or an array reference with many keys to be excluded.
+Example: 
+
+ $fact->to_string( exclude => 'engine_id' ); 
+
+ $fact->to_string( exclude => ['engine_id' , 'mac_address'] );
+
+=cut 
+
 sub to_string {
-	$_[0]->type . ' ' . join(' ',map { '(' . $_ . ' "'. quote_str($_[0]->slots->{$_}) . '")' } ( sort keys %{ $_[0]->slots } ) ) ;
+	my $self = shift // die 'incorrect call';
+	my %options = @_;
+	my @exclude_slots;
+	if ( defined( $options{ exclude } ) ){
+		@exclude_slots = defined(Scalar::Util::reftype( $options{ exclude } ))? @{ $options{ exclude } } : ( $options{ exclude } ) 
+	}
+	$self->type . ' ' . join(' ',map { '(' . $_ . ' "'. quote_str($self->slots->{$_}) . '")' } ( sort grep { my $item = $_ ; none { $item eq $_ } @exclude_slots  } keys %{ $self->slots } ) ) ;
 }
 
 sub serialize {
