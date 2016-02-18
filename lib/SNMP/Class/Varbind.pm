@@ -148,6 +148,34 @@ sub to_varbind_string {
 	}
 }
 
+# returns the time in milliseconds since the epoch
+sub epoch_millis {
+	int( $_[0]->time ) * 1000
+}
+
+# this is used internally to feed to other SNMP-agnostic systems. E.g. this
+# hash can be easily converted to a JSON document and then be fed into a document
+# store or something similar
+sub to_hash {
+	defined( my $self = shift ) or confess "missing argument";
+	# just for safety, we shouldn't ever encounter these
+	confess 'Cannot convert an object without type to hash' unless defined $self->type;
+	confess 'Cannot convert a no_such_object to a hash' if $self->no_such_object;
+	confess 'Cannot convert an end_of_mib to a hash' if $self->end_of_mib;
+	confess 'Cannot convert a varbind without value to a hash' unless defined $self->raw_value;
+
+	my $ret = {
+		oid	=> $self->numeric,
+		raw	=> $self->raw_value,
+		value	=> $self->value,
+		type	=> $self->type,	
+	};	
+	$ret->{ label } = $self->get_label if $self->has_label;
+	$ret->{ instance } = $self->get_instance_oid->numeric if $self->has_instance;
+	$ret->{ syntax } = $self->get_syntax if $self->has_syntax;
+	$ret->{ 'date' } = $self->epoch_millis;
+	return $ret
+}
 
 =head2 new(oid=>$oid,type=>$type,value=>$value)
 

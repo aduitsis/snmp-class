@@ -153,6 +153,21 @@ sub unserialize {
 
 my (%session,%name,%version,%community,%deactivate_bulkwalks);
 
+# returns an array of hashes suitable for conversion to json
+# this method is not placed in the ResultSet role, because a resultset
+# does not know the hostname, etc of the SNMP Session
+sub to_hashes {
+	my $self = shift // die 'incorrect call';
+	my @arr = $self->map(sub { 
+		my $h = $_->to_hash;
+		$h->{ sysname } = $self->sysname;
+		$h->{ engine_id } = $self->engine_id;
+		return $h	
+	});
+	return \@arr
+}
+	
+
 
 sub BUILDARGS {
 	defined( my $class = shift ) or confess "missing class argument";
