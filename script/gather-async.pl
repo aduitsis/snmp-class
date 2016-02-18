@@ -100,7 +100,7 @@ sub control_handler {
 			elsif( my ( $query ) = ( $input =~ /^info\s+(\S+)$/ ) ) {
 				if( $fact_sets->{ $query } ) { 
 					for my $fact ( @{ $fact_sets->{ $query }->facts} ) { 
-						say { $fh } $fact->to_string;
+						say { $fh } $fact->to_string( exclude => 'engine_id' );
 					}
 				}
 				else { 
