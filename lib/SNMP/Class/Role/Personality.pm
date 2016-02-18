@@ -7,8 +7,6 @@ SNMP::Class::Role::Personality - Personality framework for SNMP::Class
 
 =head1 SYNOPSIS
 
-=head 1 GENERAL
-
 The SNMP::Class::Role::Personality role is applied to all SNMP::Class
 objects. This means that SNMP::Class->new( ... ) will return an object
 ready to use various personalities. Upon inception, the session object
@@ -54,6 +52,8 @@ use SNMP::Class::Role::Personality::IpAdEntAddr;
 use SNMP::Class::Role::Personality::ManagementDomainName;
 use SNMP::Class::Role::Personality::VtpVlanState;
 use SNMP::Class::Role::Personality::VmVlan;
+use SNMP::Class::Role::Personality::LaLoad;
+use SNMP::Class::Role::Personality::DskTable;
 
 #import the utility module
 use Moose::Util qw/find_meta does_role search_class_by_role/;
@@ -106,8 +106,13 @@ sub calculate_facts {
 }
 			
 		
+=head2 calculate_personality_dependencies(@personalities) 
 
+Takes a list of personalities as argument, and calculates the exact order
+in which they must be applied, according to the dependencies of those 
+personalities amongst themselves.
 
+=cut
 sub calculate_personality_dependencies {
 	my %personalities = map { $_ => 1 } @_;
 	for my $personality ( %personalities ) { 
