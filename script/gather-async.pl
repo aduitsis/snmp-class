@@ -40,6 +40,8 @@ GetOptions( 's=s' => $job_servers , 'r' => \$recurse , 'seed=s' => \@seed , 'que
 #this starts empty, will get filled up as we move along
 my %visited_ips;
 
+my $fact_sets = { } ;
+
 sub connect_to_gearman { 
 	AnyEvent::Gearman::Client->new( job_servers => $job_servers ) ;
 }
@@ -54,14 +56,13 @@ my $gearman = connect_to_gearman ;
 #my $host = shift // die 'missing argument: hostname to gather from';
 #new_task( $gearman , $host );
 
-my $fact_sets = { } ;
-my %watchers;
 my $guard = tcp_server 'unix/', "$Bin/control.sock", \&control_handler; 
 
-
+# watchers are the open connections to this daemon from users
+# alert transmits messages to all open connections
+my %watchers;
 my $alert_condvar = AnyEvent->condvar;
 $alert_condvar->cb( \&alert_handler ) ; 
-
 sub alert_handler {
 	my @args = $_[0]->recv // die 'incorrect call';
 	for my $watcher ( values %watchers ) {
@@ -184,7 +185,6 @@ sub generate_completion_handler {
 	}
 }
 	
-
 sub generate_failure_handler {
 	my $hostname = shift // die 'incorrect call';
 	sub {
@@ -237,6 +237,13 @@ sub get_neighbors {
 	typeslot( $_[0], 'cdp_neighbor', 'address' )
 	### map { $_->slots->{ address } } @{ $_[0]->grep( sub { $_->matches( type => 'cdp_neighbor' ) } )->fact_set  } 
 }
+
+=head2 typeslot($fact_set,$type,$slot)
+
+Searches $fact_set for facts of type $type having a slot $slot, and returns the values of those slots.
+
+=cut
+
 
 sub typeslot { 
 	my $fact_set = shift // die 'incorrect call';
