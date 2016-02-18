@@ -97,9 +97,17 @@ sub control_handler {
 				new_task( $gearman , $target );
 				$alert_condvar->send("job submitted for $target");
 			}
-			elsif( my ( $query ) = ( $input =~ /^info\s+(\S+)$/ ) ) {
+			elsif( my ( $query, $rest ) = ( $input =~ /^(?:info|show|examine|sh)\s+(\S+)(.*)$/ ) ) {
+				my (%options,$bare);
+				if( $rest ) { 
+					( $bare ) = ( $rest =~ /^\s*([^= ]+)\s*/ );
+					while( $rest =~ /\s*(?<key>\S+)\s*=\s*(?<value>\S+)(?:\s+|$)/g ) { 
+						$options{ $+{key} } = $+{value};
+					}
+				}
 				if( $fact_sets->{ $query } ) { 
 					for my $fact ( @{ $fact_sets->{ $query }->facts} ) { 
+						next if( $bare && ( $fact->type ne $bare ) );
 						say { $fh } $fact->to_string( exclude => 'engine_id' );
 					}
 				}
@@ -133,7 +141,7 @@ sub control_handler {
 			elsif( $input =~ /^\s*$/ ) {
 			}
 			else { 
-				say { $fh } "My apologies, I don't know how to $input"
+				say { $fh } "I beg your pardon, I don't know how to $input"
 			}
 			print { $fh } 'omnidisco> ';
 		}
