@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 use v5.14;
 
@@ -46,7 +46,7 @@ new_task( $taskset , $host );
 $taskset->wait;
 
 
-sub new_task { 
+sub new_task {
 	my $taskset = shift // die 'incorrect call';
 	my $hostname = shift // die 'incorrect call';
 	my $community = shift // 'public';
@@ -60,13 +60,13 @@ sub new_task {
 	say STDERR GREEN "$hostname: submitted"
 }
 
-sub generate_completion_handler { 
+sub generate_completion_handler {
 	my $taskset = shift // die 'missing taskset';
 	my $hostname = shift // die 'missing hostname';
-	sub { 
+	sub {
 		say STDERR GREEN "$hostname: gather completed";
 		my $fact_set = SNMP::Class::FactSet::Simple::unserialize( ${$_[0]} ) ;
-		factset_processor( $taskset , $hostname, $fact_set ) ; 
+		factset_processor( $taskset , $hostname, $fact_set ) ;
 		say STDERR GREEN "$hostname: processing completed"
 		
 	}
@@ -80,13 +80,13 @@ sub generate_failure_handler {
 	}
 }
 
-sub factset_processor { 
+sub factset_processor {
 	my $taskset = shift // die 'missing taskset';
 	my $hostname = shift // die 'missing hostname';
 	my $fact_set = shift // die 'missing fact_set';
 	my $sysname = get_sysname( $fact_set );	
 	my @neighbors = get_neighbors( $fact_set );
-	my @ipv4s = get_ipv4s( $fact_set ); 
+	my @ipv4s = get_ipv4s( $fact_set );
 	$visited_ips{ $_ } =  1 for ( @ipv4s ) ;
 	say STDERR BOLD BLACK "$hostname: sysname is $sysname";
 	say STDERR BOLD BLACK "$hostname: neighbors are: ".join(' , ',@neighbors);
@@ -101,9 +101,9 @@ sub factset_processor {
 		say STDERR BOLD BLACK "$hostname: dumping to $filename";
 		DumpFile($filename,$fact_set)
 	}
-	if ( $recurse ) { 
+	if ( $recurse ) {
 		for my $neighbor ( @neighbors ) {
-			if ( $visited_ips{ $neighbor } ) { 
+			if ( $visited_ips{ $neighbor } ) {
 				say STDERR BOLD BLACK "$hostname: neighbor $neighbor already visited"
 			}
 			else {
@@ -114,11 +114,11 @@ sub factset_processor {
 	}
 }
 	
-sub get_sysname { 
+sub get_sysname {
 	$_[0]->grep(sub{ $_->matches( type => 'snmp_agent' ) })->item(0)->slots->{'system'};
 }
 
-sub get_ipv4s { 
+sub get_ipv4s {
 	typeslot( $_[0], 'ipv4', 'ipv4' )	
 }
 	
