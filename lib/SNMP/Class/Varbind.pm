@@ -173,7 +173,7 @@ sub to_hash {
 	$ret->{ label } = $self->get_label if $self->has_label;
 	$ret->{ instance } = $self->get_instance_oid->numeric if $self->has_instance;
 	$ret->{ syntax } = $self->get_syntax if $self->has_syntax;
-	$ret->{ 'date' } = $self->epoch_millis;
+	$ret->{ date } = $self->epoch_millis;
 	return $ret
 }
 

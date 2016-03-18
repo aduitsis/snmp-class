@@ -193,7 +193,7 @@ sub generate_failure_handler {
 }
 
 sub factset_processor { 
-	my $gearman = shift // die 'missing taskset';
+	my $gearman = shift // die 'missing taskset'; # in case we need to submit new jobs in the job queue
 	my $hostname = shift // die 'missing hostname';
 	my $fact_set = shift // die 'missing fact_set';
 	my $sysname = get_sysname( $fact_set );	

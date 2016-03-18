@@ -25,6 +25,12 @@ has 'slots' => (
 	default => sub { {} }, #even if not supplied, it's going to be an empty hash
 );
 
+has 'time' => (
+	is => 'ro',
+	isa => 'Int',
+	required => 0,
+	default => sub { time }, #TODO: is something more accurate needed?
+);
 
 sub quote_str { 
 	#$_[0] =~ s/"/\\"/g;
@@ -61,13 +67,27 @@ sub serialize {
 }
 
 sub TO_JSON {
-	encode_json { type => $_[0]->type , slots => $_[0]->slots } 
+	encode_json { type => $_[0]->type , slots => $_[0]->slots, time => $_[0]->time } 
+}
+
+=head2 elastic_doc
+
+Returns a structure suitable to be fed a the document to be inserted into an
+elasticsearch cluster. Basically contains the slots and an additional element
+date, all packed into a hash reference.
+
+=cut
+
+sub elastic_doc {
+	my $date = DateTime->from_epoch( epoch => $_[0]->time )->strftime('%Y-%m-%dT%H:%M:%SZ');
+	return { ( %{ $_[0]->slots } ) , date => $date, }
+	
 }
 
 # WARNING: this is a class method
 sub FROM_JSON {
 	my $data = decode_json( $_[0] );
-	return __PACKAGE__->new( type => $data->{type} , slots => $data->{slots} );
+	return __PACKAGE__->new( type => $data->{type} , slots => $data->{slots} , time => $data->{time} );
 }
 
 sub unserialize {

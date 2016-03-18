@@ -103,6 +103,10 @@ sub calculate_facts {
 		}
 	}
 	use strict 'refs';
+
+	# we do this in order to be able to call further methods
+	# in the same line after calling prime.
+	return $_[0]
 }
 			
 		
@@ -157,6 +161,10 @@ sub prime {
 		use strict 'refs';
 	}
 	$self->apply_personalities;
+
+	# we do this in order to be able to call further methods
+	# in the same line after calling prime.
+	return $self
 }
 
 
