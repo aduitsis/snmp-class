@@ -10,20 +10,20 @@ our $VERSION = '0.15';
 
 =head1 SYNOPSIS
 
-This module aims to allow SNMP-related tasks to be carried out with the best possible ease and expressiveness trying to hide SNMP-related details as much as possible. 
+This module aims to allow SNMP-related tasks to be carried out with the best possible ease and expressiveness trying to hide SNMP-related details as much as possible.
 
 	use SNMP::Class;
-	
+
 	$s = SNMP::Class->new($host);
 
-	$s->add('interfaces','system'); 
+	$s->add('interfaces','system');
 
 	print $s->system(0)->value."\n";
-	
+
 =head1 GENERAL
 
-To use anything in the SNMP::Class package, use this module and everything else will be included. SNMP::Class is a Moose class. SNMP::Class itself does not actually implement a lot of functionality, but rather it uses other Roles under the SNMP::Class hierarchy. These Roles implement various pieces of functionality and are applied on each SNMP::Class object to give it certain capabilities. For example, the SNMP::Class::Role::Implementation::NetSNMP can use the Net-SNMP package to talk to SNMP agents. An SNMP::Class object applies this Role to itself to be able to talk to SNMP agents as well. Or, the SNMP::Class::Role::ResultSet can store the results from SNMP operations (GETs,GETNEXTs etc). By applying this Role to itself, an SNMP::Class object can do the same. 
-   
+To use anything in the SNMP::Class package, use this module and everything else will be included. SNMP::Class is a Moose class. SNMP::Class itself does not actually implement a lot of functionality, but rather it uses other Roles under the SNMP::Class hierarchy. These Roles implement various pieces of functionality and are applied on each SNMP::Class object to give it certain capabilities. For example, the SNMP::Class::Role::Implementation::NetSNMP can use the Net-SNMP package to talk to SNMP agents. An SNMP::Class object applies this Role to itself to be able to talk to SNMP agents as well. Or, the SNMP::Class::Role::ResultSet can store the results from SNMP operations (GETs,GETNEXTs etc). By applying this Role to itself, an SNMP::Class object can do the same.
+
 
 =cut
 
@@ -58,7 +58,7 @@ for my $lib (@INC) {
 	my $logger_file = $lib.'/SNMP/SNMP-Class.logger';
 	if (-f $logger_file) {
 		Log::Log4perl->init($logger_file);
-	} 
+	}
 }
 
 my $logger = Log::Log4perl->get_logger;
@@ -70,16 +70,16 @@ use SNMP::Class::Role::Cache;
 
 subtype 'Version_ArrayRefOfInts' => as 'ArrayRef[Int]';
 
-subtype 'VersionString' 
+subtype 'VersionString'
 	=> as 'Str'
 	=> where { my $str = $_; grep { $str eq $_ } ('1','2','2c','3') }
 	=> message { "Version is not valid. Use 1,2,2c or 3." };
 
 coerce 'Version_ArrayRefOfInts'
 	=> from 'VersionString'
-		=> via { 
-			my $str =($_ eq '2c')? 2 : $_; 
-			return [$str] 
+		=> via {
+			my $str =($_ eq '2c')? 2 : $_;
+			return [$str]
 		};
 
 has 'hostname' => (
@@ -93,7 +93,7 @@ has 'possible_versions' => (
 	is => 'ro',
 	default => sub { [2,1] },
 	coerce => 1,
-	init_arg => 'version',  
+	init_arg => 'version',
 );
 
 has 'community' => (
@@ -110,18 +110,18 @@ has 'port' => (
 );
 
 has 'timeout' => (
-	is => 'rw', 
+	is => 'rw',
 	isa => 'Num',
 	default => 1000000, #microseconds
 );
 
 has 'retries' => (
-	is => 'rw', 
+	is => 'rw',
 	isa => 'Num',
-	default => 5, 
+	default => 5,
 );
 
-has 'cacheable' => ( 
+has 'cacheable' => (
 	is => 'ro',
 	isa => 'Bool',
 	default => 0,
@@ -134,22 +134,22 @@ has 'create_time' => (
 );
 
 
-sub unique_id { 
-	sha1_hex( join(':',( $_[0]->hostname, $_[0]->community, $_[0]->port,)) ) 
+sub unique_id {
+	sha1_hex( join(':',( $_[0]->hostname, $_[0]->community, $_[0]->port,)) )
 }
 
-sub serialize { 
+sub serialize {
 	SNMP::Class::Serializer->encode({ resultset => $_[0]->serialize_resultset, create_time => $_[0]->create_time });
 }
 
-sub unserialize { 
+sub unserialize {
 	my $self = shift // die 'incorrect call';
 	my $blob = shift // die 'missing blob';
-	my $ref = SNMP::Class::Serializer->decode( $blob ) ; 
+	my $ref = SNMP::Class::Serializer->decode( $blob ) ;
 	$self->create_time( $ref->{create_time} );
-	$self->empty; # there shouldn't be any varbinds inside 
+	$self->empty; # there shouldn't be any varbinds inside
 	$self->unserialize_resultset( $ref->{ resultset } );
-}	
+}
 
 my (%session,%name,%version,%community,%deactivate_bulkwalks);
 
@@ -158,32 +158,32 @@ my (%session,%name,%version,%community,%deactivate_bulkwalks);
 # does not know the hostname, etc of the SNMP Session
 sub to_hashes {
 	my $self = shift // die 'incorrect call';
-	my @arr = $self->map(sub { 
+	my @arr = $self->map(sub {
 		my $h = $_->to_hash;
 		$h->{ sysname } = $self->sysname;
 		$h->{ engine_id } = $self->engine_id;
-		return $h	
+		return $h
 	});
 	return \@arr
 }
-	
+
 
 
 sub BUILDARGS {
 	defined( my $class = shift ) or confess "missing class argument";
 	if( @_ == 1 ) {
 		return { hostname => shift };
-	} 
+	}
 	else {
 		return $class->SUPER::BUILDARGS(@_);
-	}	
+	}
 }
 
 
 sub BUILD {
-		### WARNING WARNING WARNING 
+		### WARNING WARNING WARNING
 		### MOOSE CAVEAT --
-		### when a role is applied, the object's attributes are reset 
+		### when a role is applied, the object's attributes are reset
 		### so, do finish applying whatever roles are needed and THEN create_session
 		###
 
@@ -197,10 +197,10 @@ sub BUILD {
 		SNMP::Class::Role::Personality->meta->apply($_[0]);
 
 		#also make it cacheable
-		if ( $_[0]->cacheable ) { 
+		if ( $_[0]->cacheable ) {
 			$logger->debug('applying cacheable role to object');
-			SNMP::Class::Role::Cache->plugin_apply( $_[0] ) ; 
-			return if $_[0]->revive 
+			SNMP::Class::Role::Cache->plugin_apply( $_[0] ) ;
+			return if $_[0]->revive
 		}
 
 		$_[0]->create_session;
@@ -218,18 +218,18 @@ sub add {
 
 =head2 new(hostname => $host, community => $community, port => $port, version => $version)
 
-This method creates a new session with a managed device. If just the IP or Hostname of the managed device is specified in a single argument ($s->new('myhost.mydomain')), then the module will try to talk using SNMPv2c and community 'public'. If it fails to get a response, it also try to use SNMPv1 with the same 'public' community. If one wishes to specify those details explicitly, one may do so by using the more general form above. The version argument can be either a string or a reference to an array of strings. Allowed values for those strings are '1','2','2c','3'. '2' and '2c' both mean version 2. The module will try to use those versions in the order stored in the array. If unspecified, community will default to 'public', port will default to '161', version will default to ['2','1']. 
+This method creates a new session with a managed device. If just the IP or Hostname of the managed device is specified in a single argument ($s->new('myhost.mydomain')), then the module will try to talk using SNMPv2c and community 'public'. If it fails to get a response, it also try to use SNMPv1 with the same 'public' community. If one wishes to specify those details explicitly, one may do so by using the more general form above. The version argument can be either a string or a reference to an array of strings. Allowed values for those strings are '1','2','2c','3'. '2' and '2c' both mean version 2. The module will try to use those versions in the order stored in the array. If unspecified, community will default to 'public', port will default to '161', version will default to ['2','1'].
 
 =head2 add(@list)
 
 This method tells the module to snmpwalk the specified object ids and store the results. For example:
- 
- $s->add('system','interfaces'); 
 
-This will walk the agent under the system and the interfaces subtrees and store the results in $s. If version is 2 or above, the module will try to use snmpbulkwalk otherwise it will resort to snmpgetnext. The results are stored in $s itself. To retrieve them, use $s an L<SNMP::Class:Role::ResultSet>. 
+ $s->add('system','interfaces');
+
+This will walk the agent under the system and the interfaces subtrees and store the results in $s. If version is 2 or above, the module will try to use snmpbulkwalk otherwise it will resort to snmpgetnext. The results are stored in $s itself. To retrieve them, use $s an L<SNMP::Class:Role::ResultSet>.
 
 =cut
- 
+
 =head1 AUTHOR
 
 Athanasios Douitsis, C<< <aduitsis at cpan.org> >>
@@ -267,7 +267,7 @@ L<http://search.cpan.org/dist/SNMP::Class>
 
 =head1 ACKNOWLEDGEMENTS
 
-This module uses the Perl libraries from the Net-SNMP package (L<http://www.net-snmp.org/>). I feel immensely indebted to the people that made that package available. 
+This module uses the Perl libraries from the Net-SNMP package (L<http://www.net-snmp.org/>). I feel immensely indebted to the people that made that package available.
 
 =head1 COPYRIGHT & LICENSE
 

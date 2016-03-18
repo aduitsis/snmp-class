@@ -42,11 +42,11 @@ my %visited_ips;
 
 my $fact_sets = { } ;
 
-sub connect_to_gearman { 
+sub connect_to_gearman {
 	AnyEvent::Gearman::Client->new( job_servers => $job_servers ) ;
 }
 
-my $gearman = connect_to_gearman ; 
+my $gearman = connect_to_gearman ;
 
 ### $client->job_servers(@job_servers);
 
@@ -56,13 +56,13 @@ my $gearman = connect_to_gearman ;
 #my $host = shift // die 'missing argument: hostname to gather from';
 #new_task( $gearman , $host );
 
-my $guard = tcp_server 'unix/', "$Bin/control.sock", \&control_handler; 
+my $guard = tcp_server 'unix/', "$Bin/control.sock", \&control_handler;
 
 # watchers are the open connections to this daemon from users
 # alert transmits messages to all open connections
 my %watchers;
 my $alert_condvar = AnyEvent->condvar;
-$alert_condvar->cb( \&alert_handler ) ; 
+$alert_condvar->cb( \&alert_handler ) ;
 sub alert_handler {
 	my @args = $_[0]->recv // die 'incorrect call';
 	for my $watcher ( values %watchers ) {
@@ -71,23 +71,23 @@ sub alert_handler {
 		}
 	}
 	$alert_condvar = AnyEvent->condvar;
-	$alert_condvar->cb( \&alert_handler ) ; 
+	$alert_condvar->cb( \&alert_handler ) ;
 }
 
-sub control_handler { 
+sub control_handler {
 	p %watchers;
 	my ($fh) = @_;
 	binmode( $fh, ":unix" );
 	### say { $fh } "Hello, ready to accept commands";
 	print { $fh } 'omnidisco> ';
 	say STDERR "new connection from $fh";
-	my $io_watcher = AnyEvent->io ( 
+	my $io_watcher = AnyEvent->io (
 		fh	=> $fh,
 		poll	=> 'r',
-		cb	=> sub { 
+		cb	=> sub {
 			### p @_;
 			### warn "io event <$_[0]>\n";
-			my $input = <$fh> // do { 
+			my $input = <$fh> // do {
 				delete $watchers{ $fh };
 				say STDERR "client closed the connection";
 				return
@@ -100,19 +100,19 @@ sub control_handler {
 			}
 			elsif( my ( $query, $rest ) = ( $input =~ /^(?:info|show|examine|sh)\s+(\S+)(.*)$/ ) ) {
 				my (%options,$bare);
-				if( $rest ) { 
+				if( $rest ) {
 					( $bare ) = ( $rest =~ /^\s*([^= ]+)\s*/ );
-					while( $rest =~ /\s*(?<key>\S+)\s*=\s*(?<value>\S+)(?:\s+|$)/g ) { 
+					while( $rest =~ /\s*(?<key>\S+)\s*=\s*(?<value>\S+)(?:\s+|$)/g ) {
 						$options{ $+{key} } = $+{value};
 					}
 				}
-				if( $fact_sets->{ $query } ) { 
-					for my $fact ( @{ $fact_sets->{ $query }->facts} ) { 
+				if( $fact_sets->{ $query } ) {
+					for my $fact ( @{ $fact_sets->{ $query }->facts} ) {
 						next if( $bare && ( $fact->type ne $bare ) );
 						say { $fh } $fact->to_string( exclude => 'engine_id' );
 					}
 				}
-				else { 
+				else {
 					say { $fh } "don't know anything about $query";
 				}
 			}
@@ -123,15 +123,15 @@ sub control_handler {
 				no strict 'refs';
 				say { $fh } "$read_var = ".${ $read_var };
 				use strict 'refs';
-			}	
+			}
 			elsif( my ($var,$value) = ( $input =~ /^\s*set\s*(\S+)\s*=\s*(\S+)/ ) ) {
 				say { $fh } "Setting $var to $value";
 				no strict 'refs';
 				${ $var } = $value;
 				use strict 'refs';
-			}	
+			}
 			elsif( $input =~ /^(quit|exit)/i ) {
-				$quit_program->send 
+				$quit_program->send
 			}
 			elsif( $input =~ /^(no\s+term\S*\s+mon|term\S*\s+no\s+mon|alert\S*\s+off)/i ) {
 				$watchers{ $fh }->{ alerts } = 0;
@@ -141,13 +141,13 @@ sub control_handler {
 			}
 			elsif( $input =~ /^\s*$/ ) {
 			}
-			else { 
+			else {
 				say { $fh } "I beg your pardon, I don't know how to $input"
 			}
 			print { $fh } 'omnidisco> ';
 		}
 	);
-	$watchers{ $fh } = { fh => $fh , aio => $io_watcher , alerts => 1 } ; 
+	$watchers{ $fh } = { fh => $fh , aio => $io_watcher , alerts => 1 } ;
 }
 
 
@@ -157,34 +157,34 @@ new_task( $gearman, $_ ) for(@seed);
 ### $taskset->wait;
 $quit_program->recv;
 
-sub new_task { 
+sub new_task {
 	my $gearman = shift // die 'incorrect call';
 	my $hostname = shift // die 'incorrect call';
 	my $community = shift // 'public';
 	my $timeout = shift // 5000000;
 	say STDERR GREEN "$hostname: adding task";
 	my $task = Dump(  [ hostname => $hostname , community => 'public' , timeout => $timeout , query_all_vlans => ($query_all_vlans? 1 : 0 ) ] );
-	$gearman->add_task( 'snmp_gather' => $task, 
+	$gearman->add_task( 'snmp_gather' => $task,
 		on_complete	=> generate_completion_handler($gearman,$hostname),
 		on_fail		=> generate_failure_handler($hostname),
 	);
 	say STDERR GREEN "$hostname: submitted"
 }
 
-sub generate_completion_handler { 
+sub generate_completion_handler {
 	my $gearman = shift // die 'missing gearman';
 	my $hostname = shift // die 'missing hostname';
-	sub { 
+	sub {
 		### p $_[1];
 		say STDERR GREEN "$hostname: gather completed";
 		my $fact_set = SNMP::Class::FactSet::Simple::unserialize( $_[1] ) ;
-		factset_processor( $gearman , $hostname, $fact_set ) ; 
+		factset_processor( $gearman , $hostname, $fact_set ) ;
 		say STDERR GREEN "$hostname: processing completed";
 		$alert_condvar->send("job completed for $hostname");
-		
+
 	}
 }
-	
+
 sub generate_failure_handler {
 	my $hostname = shift // die 'incorrect call';
 	sub {
@@ -192,13 +192,13 @@ sub generate_failure_handler {
 	}
 }
 
-sub factset_processor { 
+sub factset_processor {
 	my $gearman = shift // die 'missing taskset'; # in case we need to submit new jobs in the job queue
 	my $hostname = shift // die 'missing hostname';
 	my $fact_set = shift // die 'missing fact_set';
-	my $sysname = get_sysname( $fact_set );	
+	my $sysname = get_sysname( $fact_set );
 	my @neighbors = get_neighbors( $fact_set );
-	my @ipv4s = get_ipv4s( $fact_set ); 
+	my @ipv4s = get_ipv4s( $fact_set );
 	$visited_ips{ $_ } =  1 for ( @ipv4s ) ;
 	say STDERR BOLD BLACK "$hostname: sysname is $sysname";
 	say STDERR BOLD BLACK "$hostname: neighbors are: ".join(' , ',@neighbors);
@@ -212,9 +212,9 @@ sub factset_processor {
 	$fact_sets->{$hostname} = $fact_set;
 	$fact_sets->{ $sysname } = $fact_set;
 	$fact_sets->{ $_ } = $fact_set for( @ipv4s );
-	if ( $recurse ) { 
+	if ( $recurse ) {
 		for my $neighbor ( @neighbors ) {
-			if ( $visited_ips{ $neighbor } ) { 
+			if ( $visited_ips{ $neighbor } ) {
 				say STDERR BOLD BLACK "$hostname: neighbor $neighbor already visited"
 			}
 			else {
@@ -224,18 +224,18 @@ sub factset_processor {
 		}
 	}
 }
-	
-sub get_sysname { 
+
+sub get_sysname {
 	$_[0]->grep(sub{ $_->matches( type => 'snmp_agent' ) })->item(0)->slots->{'system'};
 }
 
-sub get_ipv4s { 
-	typeslot( $_[0], 'ipv4', 'ipv4' )	
+sub get_ipv4s {
+	typeslot( $_[0], 'ipv4', 'ipv4' )
 }
-	
+
 sub get_neighbors {
 	typeslot( $_[0], 'cdp_neighbor', 'address' )
-	### map { $_->slots->{ address } } @{ $_[0]->grep( sub { $_->matches( type => 'cdp_neighbor' ) } )->fact_set  } 
+	### map { $_->slots->{ address } } @{ $_[0]->grep( sub { $_->matches( type => 'cdp_neighbor' ) } )->fact_set  }
 }
 
 =head2 typeslot($fact_set,$type,$slot)
@@ -245,7 +245,7 @@ Searches $fact_set for facts of type $type having a slot $slot, and returns the 
 =cut
 
 
-sub typeslot { 
+sub typeslot {
 	my $fact_set = shift // die 'incorrect call';
 	my $type = shift // die 'incorrect call';
 	my $slot = shift // die 'incorrect call';

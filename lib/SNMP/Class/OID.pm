@@ -10,22 +10,22 @@ my $logger = Log::Log4perl::get_logger();
 
 #we test to see whether we can load NetSNMP::OID
 my $has_netsnmp;
-eval { 
-	require NetSNMP::OID; 
+eval {
+	require NetSNMP::OID;
 	NetSNMP::OID->import();
 };
 if ( $@ ) {
         $logger->fatal('Error! Cannot load NetSNMP::OID, module is missing')
 }
 $has_netsnmp = ($@)? 0 : 1;
-	
+
 
 subtype 'OID_ArrayRefOfInts' => as 'ArrayRef[Int]';
 
 #this is the type check validation for the 'NetSNMP::OID' data type
-type 'NetSNMP::OID' => where { 
-	my $status = eval { $_->isa('NetSNMP::OID') }; 
-	return if $@; 
+type 'NetSNMP::OID' => where {
+	my $status = eval { $_->isa('NetSNMP::OID') };
+	return if $@;
 	return $status;
 };
 
@@ -34,9 +34,9 @@ type 'NetSNMP::OID' => where {
 #use has the option to supply
 #1)A NetSNMP::OID, in which case it is converted (easily) to the array
 #2)A string
-#3)Another SNMP::Class::OID. 
+#3)Another SNMP::Class::OID.
 
-coerce 'OID_ArrayRefOfInts' 
+coerce 'OID_ArrayRefOfInts'
 	=> from 'NetSNMP::OID'
 		=> via {
 			my @arr = $_->to_array;
@@ -48,7 +48,7 @@ coerce 'OID_ArrayRefOfInts'
 			my @arr = SNMP::Class::Utils::convert_str_to_array($_);
 			while(defined(my $item = pop(@arr))) {
 				###DEBUG "item is $item";
-				if(looks_like_number($item)) {	
+				if(looks_like_number($item)) {
 					unshift @newarr,($item);
 				}
 				else {
@@ -58,16 +58,16 @@ coerce 'OID_ArrayRefOfInts'
 				}
 			}
 			###DEBUG "$_ converts to ".join(',',@newarr);
-			return \@newarr; 
+			return \@newarr;
 		}
 	=> from 'SNMP::Class::OID'
 		=> via {
 			return $_->to_arrayref
 		}
 ;
-			
-	
- 
+
+
+
 
 has 'oid' => (
 	is => 'ro', #object is immutable
@@ -75,24 +75,24 @@ has 'oid' => (
 	reader => 'get_oid', #accessor is named get_oid
 	coerce => 1, #if passed a NetSNMP::OID we will convert it
 	required => 1, #this attribute must be supplied
-	
+
 );
 
 
 sub BUILDARGS {
 	defined( my $class = shift ) or confess 'missing class argument';
-	if( @_ == 1 ) { #if we got only one argument, it must be the oid 
+	if( @_ == 1 ) { #if we got only one argument, it must be the oid
 		return { oid => shift };
-	} 
+	}
 	else {
 		return $class->SUPER::BUILDARGS(@_);
-	}	
+	}
 }
 
 
 =head1 NAME
 
-SNMP::Class::OID - Represents an SNMP Object-ID. 
+SNMP::Class::OID - Represents an SNMP Object-ID.
 
 =cut
 
@@ -112,7 +112,7 @@ our $VERSION = '0.15';
  my $oid = SNMP::Class::OID->new(oid => $another_snmp_class_oid_object);
  # or
  my $oid = SNMP::Class::OID->new(oid => $netsnmp_oid_object);
- 
+
  #representations
  $oid->to_string; #string representation -- sysName.0
  $oid->numeric; #numeric representation -- .1.3.6.1.2.1.1.5.0
@@ -126,7 +126,7 @@ our $VERSION = '0.15';
 
  #equality
  $oid1 == $oid2; # yields true if they are the same
- $oid1 == '.1.3.6.1.2.1.1.5.0' #also acceptable, second operand will be converted 
+ $oid1 == '.1.3.6.1.2.1.1.5.0' #also acceptable, second operand will be converted
 
  #hierarchy
  $oid2 = SNMP::Class::OID->new('.1.3.6.1.2.1.1');
@@ -145,23 +145,23 @@ The following operators are overloaded:
 
 =over 4
 
-=item * <=> 
+=item * <=>
 
 Two SNMP::Class::OID objects can be compared using the == operator. The result is what everybody expects.
 
 
-=item * '.' 
+=item * '.'
 
 Two SNMP::Class::OID objects can be concatenated using the . operator. Note that order actually is important. Example: .1.3.6 . .1.4.1 will yield .1.3.6.1.4.1.
 
 
-=item * @{} 
+=item * @{}
 
 If an SNMP::Class::OID object is used as an array reference, it will act as an array containing the individual numbers of the OID. Example:
 
 
  my $oid = SNMP::Class::OID->new("1.3.6.1.4.1");
- print $oid->[1]; #will print 3 
+ print $oid->[1]; #will print 3
 
 =back
 
@@ -180,9 +180,9 @@ If an SNMP::Class::OID object is used as an array reference, it will act as an a
 
 new can be used to construct a new object-id. Takes one string as an argument, like ".1.3.6.4.1". Returns an SNMP::Class::OID object, or confesses if that is not possible. If the 1rst argument is a L<NetSNMP::OID> instead of a string, the constructor will notice and take appropriate action to return a valid object.
 
-=head2 get_syntax 
+=head2 get_syntax
 
-Returns, if it exists, the SNMP SYNTAX clause for the oid or undef if it doesn't. 
+Returns, if it exists, the SNMP SYNTAX clause for the oid or undef if it doesn't.
 
 =cut
 
@@ -190,7 +190,7 @@ sub get_syntax {
 	return SNMP::Class::Utils::syntax_of($_[0]->numeric);
 }
 
-=head2 has_syntax 
+=head2 has_syntax
 
 Tells if we know the syntax for the object. Convenience shortcut instead of testing get_syntax for definedness.
 
@@ -198,9 +198,9 @@ Tells if we know the syntax for the object. Convenience shortcut instead of test
 
 sub has_syntax {
 	return defined($_[0]->get_syntax);
-}		
+}
 
-=head2 get_label 
+=head2 get_label
 
 Returns the label for this oid if it exists or undef if it doesn't.
 
@@ -239,14 +239,14 @@ sub has_label {
 
 =head2 get_instance_oid
 
-Returns an SNMP::Class::OID object corresponding to the instance of this oid. For example, for an oid like ifDescr.3, we would get a new SNMP::Class::OID equivalent to .3. May return undef, as there may be no instance (for example a non-leaf oid) or it may not be possible to know it. 
+Returns an SNMP::Class::OID object corresponding to the instance of this oid. For example, for an oid like ifDescr.3, we would get a new SNMP::Class::OID equivalent to .3. May return undef, as there may be no instance (for example a non-leaf oid) or it may not be possible to know it.
 
 =cut
 
 sub get_instance_oid {
 	defined(my $self = shift(@_)) or confess "incorrect call";
 	my $label_oid = $self->get_label_oid;
-	confess "no instance for ".$self->to_string.'('.$self->numeric.')' 
+	confess "no instance for ".$self->to_string.'('.$self->numeric.')'
 		unless $self->has_instance;
 	my $start = $label_oid->length+1;
 	my $end = $self->length;
@@ -268,21 +268,21 @@ sub has_instance {
 	#ok, we have a label -- but do we have more numbers to constitute the instance?
 	my $label_oid = $self->get_label_oid;
 	#normal case: we are a label and nothing more (example: ifDescr )
-	return if($self->length == $label_oid->length);	
+	return if($self->length == $label_oid->length);
 	#ok last check, we should have at least 1 number at the end
 	return 1 if($self->length > $label_oid->length);
-	#ditch. 
+	#ditch.
 	confess "internal error. It would appear that ".$self->numeric.
 		" is shorter than its label ".$label_oid->numeric;
-	
+
 }
-	
-	
+
+
 
 =head2 slice
 
 Slice can extract a portion of an object-id and return it as a new SNMP::Class::OID object. Example:
- 
+
  my $oid = SNMP::Class::OID->new("1.3.6.1.4.1");
  my $suboid = $oid->slice(1..3); #will return .1.3.6
  my $suboid = $oid->slice(1,2,3); #completely equivalent
@@ -305,7 +305,7 @@ sub slice {
 	$end-=1;
 	return __PACKAGE__->new('.'.join('.',($self->to_array)[$start..$end]));
 }
-	
+
 
 sub netsnmpoid {
 	confess "Sorry, NetSNMP::OID cannot be loaded...maybe NetSNMP not installed?" unless $has_netsnmp;
@@ -328,11 +328,11 @@ sub to_arrayref {
 	return \@array;
 }
 
-=head2 to_number 
+=head2 to_number
 
 For an OID of length exactly equal to 1, this method will return the oid
 in a plain number e.g. an oid like .3 will return just 3. This is useful
-to convert single oid instances to values. 
+to convert single oid instances to values.
 
 =cut
 
@@ -349,7 +349,7 @@ sub to_number {
 
 This method will create a varbind from its argument and set its value to
 be equal to the value that is returned by the to_number method of this
-object. Example: For OID .1, varbind_from_number(2) will return .2 with 
+object. Example: For OID .1, varbind_from_number(2) will return .2 with
 value 1
 
 =cut
@@ -371,11 +371,11 @@ sub length {
 }
 
 
-=head2 is_null 
+=head2 is_null
 
-returns true if the object represents the null object identifier. 
+returns true if the object represents the null object identifier.
 SNMPv2-SMI defines a null object id to be { 0 0 } or 0.0 or zeroDotZero.
-Let's just hope that we won't encounter 0.0 instances any time soon. 
+Let's just hope that we won't encounter 0.0 instances any time soon.
 
 =cut
 
@@ -383,11 +383,11 @@ sub is_null {
 	return 1 if ($_[0]->numeric eq ".0.0");#this should be fairly fast
 	return;
 }
-	
-	
+
+
 =head2 numeric
 
-Returns a numeric representation of the object. 
+Returns a numeric representation of the object.
 
 =cut
 
@@ -405,8 +405,8 @@ sub to_string {
 	defined( my $self = shift ) or confess "incorrect call";
 	return $self->get_label.$self->get_instance_oid->numeric if($self->has_label&&$self->has_instance);
 	return $self->get_label if $self->has_label;
-	return $self->numeric;#fallback 
-	
+	return $self->numeric;#fallback
+
 }
 
 =head2 add
@@ -419,7 +419,7 @@ Concatenates two OIDs. Use it through the . overloaded operator. Second argument
 sub add {
 	defined( my $self = shift ) or confess "incorrect call";
 	my $other = __PACKAGE__->new(shift);
-	my $reverse = shift; 
+	my $reverse = shift;
 	if( defined($reverse) && $reverse ) {
 		($self,$other) = ($other,$self);
 	}
@@ -436,7 +436,7 @@ Compares two OIDs. Has the same semantic with the spaceship <=> operator. Second
 
 sub oid_compare {
 	defined( my $self = shift ) or confess "incorrect call";
-	my $other = __PACKAGE__->new(shift);	
+	my $other = __PACKAGE__->new(shift);
 	confess "Internal error: Second argument missing from compare. Second argument was ".Dumper($other)."\n" unless(ref $other);
 	my @arr1 = $self->to_array;
 	my @arr2 = $other->to_array;
@@ -458,11 +458,11 @@ sub oid_compare {
 			if ($item1 != $item2) {
 					return $item1 <=> $item2;
 			}
-		} 
+		}
 	}
 }
-       
-=head2 oid_is_equal 
+
+=head2 oid_is_equal
 
 Returns 1 if the 1st argument is the same oid, else undef.
 
@@ -472,20 +472,20 @@ sub oid_is_equal {
 	return 1 if ($_[0]->oid_compare($_[1]) == 0);
 	return;
 }
-	
-	
-	 
+
+
+
 =head2 contains
 
 Can ascertain if an oid is a subset of the oid represented by the object. Takes SNMP::Class::OID as 1st and only argument. String also acceptable as it will be autoconverted. Example:
- 
+
  $oid1 = SNMP::Class::OID->new(".1.3.6.1.4.1");
  $oid2 = SNMP::Class::OID->new(".1.3.6.1.4.1.1");
  $oid1->contains($oid2); #yields true
  $oid1->contains(".1.3.6.1.4.1.1");#the same
- 
+
 =cut
- 
+
 sub contains {
 	defined( my $self = shift ) or confess "incorrect call";
 	my $other_oid = __PACKAGE__->new(shift);
@@ -511,7 +511,7 @@ Can create an oid from a literal string. Useful to generate instances which corr
 
  my $instance = SNMP::Class::OID->new_from_string("foo","yes_it_is_implied"); # returns .102.111.111
 
-=cut  
+=cut
 
 sub new_from_string {
 	defined( my $class = shift ) or confess "Incorrect call to new";

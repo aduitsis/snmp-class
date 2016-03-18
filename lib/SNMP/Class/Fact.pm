@@ -16,7 +16,7 @@ has 'type' => (
 	is => 'ro',
 	isa => 'Str',
 	required => 1,
-);	
+);
 
 has 'slots' => (
 	is => 'ro',
@@ -32,7 +32,7 @@ has 'time' => (
 	default => sub { time }, #TODO: is something more accurate needed?
 );
 
-sub quote_str { 
+sub quote_str {
 	#$_[0] =~ s/"/\\"/g;
 	$_[0] =~ s/"//g;
 	$_[0]
@@ -41,22 +41,22 @@ sub quote_str {
 =head2 to_string( [ exclude => 'slotname' | exclude =>['slot1','slot2',...] ] )
 
 Returns a string representation of the fact, quoting values of slots as necessary. The exclude
-argument can be used to ask for the exclusion of slot(s) name(s) from the string. The value of the 
+argument can be used to ask for the exclusion of slot(s) name(s) from the string. The value of the
 exclude argument can be either a scalar value or an array reference with many keys to be excluded.
-Example: 
+Example:
 
- $fact->to_string( exclude => 'engine_id' ); 
+ $fact->to_string( exclude => 'engine_id' );
 
  $fact->to_string( exclude => ['engine_id' , 'mac_address'] );
 
-=cut 
+=cut
 
 sub to_string {
 	my $self = shift // die 'incorrect call';
 	my %options = @_;
 	my @exclude_slots;
 	if ( defined( $options{ exclude } ) ){
-		@exclude_slots = defined(Scalar::Util::reftype( $options{ exclude } ))? @{ $options{ exclude } } : ( $options{ exclude } ) 
+		@exclude_slots = defined(Scalar::Util::reftype( $options{ exclude } ))? @{ $options{ exclude } } : ( $options{ exclude } )
 	}
 	$self->type . ' ' . join(' ',map { '(' . $_ . ' "'. quote_str($self->slots->{$_}) . '")' } ( sort grep { my $item = $_ ; none { $item eq $_ } @exclude_slots  } keys %{ $self->slots } ) ) ;
 }
@@ -67,7 +67,7 @@ sub serialize {
 }
 
 sub TO_JSON {
-	encode_json { type => $_[0]->type , slots => $_[0]->slots, time => $_[0]->time } 
+	encode_json { type => $_[0]->type , slots => $_[0]->slots, time => $_[0]->time }
 }
 
 =head2 elastic_doc
@@ -81,7 +81,7 @@ date, all packed into a hash reference.
 sub elastic_doc {
 	my $date = DateTime->from_epoch( epoch => $_[0]->time )->strftime('%Y-%m-%dT%H:%M:%SZ');
 	return { ( %{ $_[0]->slots } ) , date => $date, }
-	
+
 }
 
 # WARNING: this is a class method
@@ -107,7 +107,7 @@ sub matches {
 
 	my $target = $rest[0];
 	if( ! ( ref( $rest[0] ) && blessed( $rest[0] ) && $rest[0]->isa('SNMP::Class::Fact') ) ){
-		$target = SNMP::Class::Fact->new( @rest ) 
+		$target = SNMP::Class::Fact->new( @rest )
 	}
 	#must be of the same type
 	return unless $self->type eq $target->type;
@@ -117,7 +117,7 @@ sub matches {
 	}
 	return 1;
 }
-		
+
 
 sub BUILDARGS {
 	my $class = shift( @_ ) ;
@@ -128,14 +128,14 @@ sub BUILDARGS {
 	my %args = @_;
 
 	# if there is the 'frozen' key, then the argument is a serialized SNMP::Class::Fact
-	if ( defined( $args{ frozen } ) ) { 
+	if ( defined( $args{ frozen } ) ) {
 		return SNMP::Class::Fact::unserialize( $args{ frozen } )
-	} 
+	}
 	elsif( defined( $args{ json } ) ) {
 		return SNMP::Class::Fact::from_json( $args{ json } )
 	}
 	else {
-		return $class->SUPER::BUILDARGS(@_);	
+		return $class->SUPER::BUILDARGS(@_);
 	}
 }
 
