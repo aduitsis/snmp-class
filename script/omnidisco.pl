@@ -128,12 +128,18 @@ sub control_handler {
 						$options{ $+{key} } = $+{value};
 					}
 				}
-				my $result = $redis->get( "omnidisco:factset:$query" );
-				if( defined( $result ) ) {
-					my $fact_set = SNMP::Class::FactSet::Simple::unserialize( $result );
-					for my $fact ( @{ $fact_set->facts} ) {
-						next if( $bare && ( $fact->type ne $bare ) );
-						say { $fh } $fact->to_string( exclude => 'engine_id' );
+				my $id = $redis->get( "omnidisco:factset_index:$query" );
+				if( defined( $id ) ) {
+					my $result = $redis->get( "omnidisco:factset:$id" ); 
+					if( defined( $result ) ) {
+						my $fact_set = SNMP::Class::FactSet::Simple::unserialize( $result );
+						for my $fact ( @{ $fact_set->facts} ) {
+							next if( $bare && ( $fact->type ne $bare ) );
+							say { $fh } $fact->to_string( exclude => 'engine_id' );
+						}
+					}
+					else {
+						say { $fh } "Unfortunately it seems that the cached result for $query has expired";
 					}
 				}
 				else {
@@ -141,9 +147,9 @@ sub control_handler {
 				}
 			}
 			elsif( $input =~ /^\s*(list|ls|devices|show\s+devices|inv)\s*$/ ) {
-				my @result = $redis->keys( 'omnidisco:factset:*' );
+				my @result = $redis->keys( 'omnidisco:factset_index:*' );
 				if( @result ) {
-					say { $fh } join("\n",map { ($_ =~ /^omnidisco:factset:(.+)$/)? $1 : ()  } @result )
+					say { $fh } join("\n",map { ($_ =~ /^omnidisco:factset_index:(.+)$/)? $1 : ()  } @result )
 				}
 			}
 			#elsif( $input =~ /^dump.*fact/ ) {
@@ -243,10 +249,10 @@ sub factset_processor {
 	# 	say '('.$_->to_string.')';
 	# }
         # say ')';
-	#### $redis->set("omnidisco:factset:$sysname"
+	$redis->set('omnidisco:factset:'.$fact_set->unique_id => $fact_set->serialize , 'EX' => 3600 );
 	for my $key ( $hostname , $sysname , @ipv4s ) {
 		# $fact_sets->{ $key } = $fact_set;
-		$redis->set("omnidisco:factset:$key" => $fact_set->serialize, 'EX' => 3600 );
+		$redis->set("omnidisco:factset_index:$key", => $fact_set->unique_id , 'EX' => 3600 );
 	}
 	if ( $recurse ) {
 		for my $neighbor ( @neighbors ) {
