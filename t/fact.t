@@ -29,10 +29,13 @@ my $f2 = SNMP::Class::Fact::unserialize( $frozen );
 
 is($f2->to_string,'test1 (alpha "beta") (gamma "delta")','serialize and unserialize a fact');
 
+is($f1->unique_id,$f2->unique_id,'serialization preserves the unique id');
 
 my $f3 = SNMP::Class::Fact->new( frozen => $frozen );
 
 is($f3->to_string,'test1 (alpha "beta") (gamma "delta")','serialize and unserialize via the constructor');
+
+is($f1->unique_id,$f3->unique_id,'serialization preserves the unique id even when using the constructor');
 
 
 ok( $f1->matches( type => 'test1' ), 'matches test1 fact');
@@ -65,12 +68,15 @@ my $time = $f1->time;
 ###is($json,'{"type":"test1","slots":{"gamma":"delta","alpha":"beta"}}','serialize object to json');
 is_deeply( from_json( $json ) , from_json( '{"time":'.$time.',"type":"test1","slots":{"gamma":"delta","alpha":"beta"}}' ), 'serialize object to json');
 
+
 my $f4 = SNMP::Class::Fact::FROM_JSON( $json );
 my $f5 = SNMP::Class::Fact->new( json => $json );
 isa_ok($f4,'SNMP::Class::Fact');
 isa_ok($f5,'SNMP::Class::Fact');
 ok( $f1->matches( $f4 ), 'json serialize and deserialize using TO_JSON and FROM_JSON');
 ok( $f1->matches( $f5 ), 'json serialize and deserialize using TO_JSON and constructor');
+is($f1->unique_id,$f4->unique_id,'json serialization preserves the unique id');
+is($f1->unique_id,$f5->unique_id,'json serialization preserves the unique id even when using the constructor');
 
 
 $json = $f0->TO_JSON;
@@ -81,6 +87,8 @@ isa_ok($f4,'SNMP::Class::Fact');
 isa_ok($f5,'SNMP::Class::Fact');
 ok( $f0->matches( $f4 ), 'json serialize and deserialize using TO_JSON and FROM_JSON');
 ok( $f0->matches( $f5 ), 'json serialize and deserialize using TO_JSON and constructor');
+is($f0->unique_id,$f4->unique_id,'json serialization preserves the unique id');
+is($f0->unique_id,$f5->unique_id,'json serialization preserves the unique id even when using the constructor');
 
 $json = $fs1->TO_JSON;
 ###say $json;
@@ -92,3 +100,4 @@ for (my $i=0;$i<$fs3->count;$i++) {
 }
 
 is( $fs1->time , $fs3->time , 'FactSet JSON serialization preserves time field' );
+is($fs1->unique_id,$fs3->unique_id,'factset json serialization preserves the unique id');

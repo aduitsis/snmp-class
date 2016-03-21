@@ -14,8 +14,8 @@ use Moose;
 use Moose::Util::TypeConstraints;
 use YAML qw(freeze thaw);
 use JSON;
-
-use Scalar::Util 'blessed';
+use Digest::SHA1 qw(sha1_hex);	
+use Scalar::Util qw(blessed);
 
 with 'SNMP::Class::Role::FactSet';
 
@@ -37,6 +37,18 @@ has 'time' => (
 #declaring a reader attr for 'fact_set' does not satisfy Moose, unfortunately
 sub facts {
 	$_[0]->fact_set;
+}
+
+sub unique_id {
+	# order is not significant, FactSets with the same Facts in varying orders should
+	# produce the same unique_id. So we try to sort the Fact unique_ids to make the
+	# order deterministic. 
+	sha1_hex(
+		join('',
+			$_[0]->time,
+			sort map { $_->unique_id } @{ $_[0]->facts }
+		)
+	);
 }
 
 sub push { 
@@ -83,7 +95,7 @@ sub FROM_JSON {
 	my $data = decode_json $_[0];
 	__PACKAGE__->new( 
 		time => $data->{ time},
-		fact_set => [ map { SNMP::Class::Fact->new( type => $_->{type} , slots => $_->{slots} ) } @{ $data->{fact_set} } ]
+		fact_set => [ map { SNMP::Class::Fact->new( type => $_->{type} , slots => $_->{slots} ) } @{ $data->{fact_set} } ],
 	);
 }	
 

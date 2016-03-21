@@ -9,7 +9,7 @@ use List::Util qw(none);
 use Moose;
 use YAML qw(freeze thaw);
 use JSON;
-
+use Digest::SHA1 qw(sha1_hex);
 use SNMP::Class::Serializer;
 
 has 'type' => (
@@ -40,10 +40,12 @@ sub quote_str {
 
 =head2 to_string( [ exclude => 'slotname' | exclude =>['slot1','slot2',...] ] )
 
-Returns a string representation of the fact, quoting values of slots as necessary. The exclude
-argument can be used to ask for the exclusion of slot(s) name(s) from the string. The value of the
-exclude argument can be either a scalar value or an array reference with many keys to be excluded.
-Example:
+Returns a string representation of the fact, quoting values of slots as necessary. The order of
+slots is deterministic and doesn't change across invocations.
+
+The exclude argument can be used to ask for the exclusion of slot(s) name(s) from the string.
+The value of the exclude argument can be either a scalar value or an array reference with many 
+keys to be excluded. Example: 
 
  $fact->to_string( exclude => 'engine_id' );
 
@@ -68,6 +70,22 @@ sub serialize {
 
 sub TO_JSON {
 	encode_json { type => $_[0]->type , slots => $_[0]->slots, time => $_[0]->time }
+}
+
+=head2 unique_id
+
+Returns an identifier that is unique for this fact. Order of slots is not taken into account
+when this identifier is constructed. Identical facts with different timestamps have different 
+identifiers. The identifier is a hex string, so it is safe to use it as a hash key. 
+
+=cut
+
+sub unique_id {
+	sha1_hex( join('',
+		$_[0]->time,
+		$_[0]->type,
+		join('',sort map { $_.$_[0]->slots->{$_} } keys %{ $_[0]->slots } ),
+	));
 }
 
 =head2 elastic_doc
