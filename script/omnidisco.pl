@@ -28,8 +28,6 @@ $Term::ANSIColor::AUTORESET = 1;
 
 use Redis;
 
-
-
 # AnyEvent doc: just call $quit_program->send anytime you want to quit
 my $quit_program = AnyEvent->condvar;
 
@@ -62,6 +60,7 @@ else {
 #this starts empty, will get filled up as we move along
 my %visited_ips;
 
+
 my $fact_sets = { } ;
 
 sub connect_to_gearman {
@@ -79,6 +78,7 @@ my $gearman = connect_to_gearman ;
 #new_task( $gearman , $host );
 
 my $guard = tcp_server 'unix/', "$Bin/control.sock", \&control_handler;
+
 
 # watchers are the open connections to this daemon from users
 # alert transmits messages to all open connections
@@ -128,7 +128,7 @@ sub control_handler {
 						$options{ $+{key} } = $+{value};
 					}
 				}
-				my $result = $redis->get( "omnidisco:$query" );
+				my $result = $redis->get( "omnidisco:factset:$query" );
 				if( defined( $result ) ) {
 					my $fact_set = SNMP::Class::FactSet::Simple::unserialize( $result );
 					for my $fact ( @{ $fact_set->facts} ) {
@@ -141,18 +141,19 @@ sub control_handler {
 				}
 			}
 			elsif( $input =~ /^\s*(list|ls|devices|show\s+devices|inv)\s*$/ ) {
-				my @result = $redis->keys( 'omnidisco:*' );
+				my @result = $redis->keys( 'omnidisco:factset:*' );
 				if( @result ) {
-					say { $fh } join("\n",map { ($_ =~ /^omnidisco:(.+)$/)? $1 : ()  } @result )
+					say { $fh } join("\n",map { ($_ =~ /^omnidisco:factset:(.+)$/)? $1 : ()  } @result )
 				}
 			}
-			elsif( $input =~ /^dump.*fact/ ) {
-				say { $fh } join("\n", keys %{$fact_sets} );
-			}
+			#elsif( $input =~ /^dump.*fact/ ) {
+			#	say { $fh } join("\n", keys %{$fact_sets} );
+			#}
 			elsif( my ($read_var) = ( $input =~ /^\s*get\s*(\S+)\s*/ ) ) {
 				no strict 'refs';
-				say { $fh } "$read_var = ".${ $read_var };
+				say { $fh } $read_var . '=' . ${ $read_var };
 				use strict 'refs';
+				p %::;
 			}
 			elsif( my ($var,$value) = ( $input =~ /^\s*set\s*(\S+)\s*=\s*(\S+)/ ) ) {
 				say { $fh } "Setting $var to $value";
@@ -183,6 +184,8 @@ sub control_handler {
 
 #this is done only once, upon program invocation
 new_task( $gearman, $_ ) for(@seed);
+
+say STDERR GREEN 'Startup complete, entering event loop';
 
 ### $taskset->wait;
 $quit_program->recv;
@@ -229,29 +232,39 @@ sub factset_processor {
 	my $sysname = get_sysname( $fact_set );
 	my @neighbors = get_neighbors( $fact_set );
 	my @ipv4s = grep { $_ ne '127.0.0.1' } get_ipv4s( $fact_set );
-	$visited_ips{ $_ } =  1 for ( @ipv4s ) ;
+	#$visited_ips{ $_ } =  1 for ( @ipv4s ) ;
+	$redis->hset('omnidisco:visited_ips', $_ => time ) for ( @ipv4s ) ;
 	say STDERR BOLD BLACK "$hostname: sysname is $sysname";
 	say STDERR BOLD BLACK "$hostname: neighbors are: ".join(' , ',@neighbors);
 	say STDERR BOLD BLACK "$hostname: host IPv4 addresses are: ".join(' , ',@ipv4s);
-	state $counter = 1;
-	say '(deffacts snmp_knowledge_'.$counter++.' "facts on '.$sysname.'"';
-	for( @{ $fact_set->facts } ) {
-		say '('.$_->to_string.')';
-	}
-        say ')';
+	# state $counter = 1;
+	# say '(deffacts snmp_knowledge_'.$counter++.' "facts on '.$sysname.'"';
+	# for( @{ $fact_set->facts } ) {
+	# 	say '('.$_->to_string.')';
+	# }
+        # say ')';
+	#### $redis->set("omnidisco:factset:$sysname"
 	for my $key ( $hostname , $sysname , @ipv4s ) {
-		$fact_sets->{ $key } = $fact_set;
-		$redis->set("omnidisco:$key" => $fact_set->serialize, 'EX' => 3600 );
+		# $fact_sets->{ $key } = $fact_set;
+		$redis->set("omnidisco:factset:$key" => $fact_set->serialize, 'EX' => 3600 );
 	}
 	if ( $recurse ) {
 		for my $neighbor ( @neighbors ) {
-			if ( $visited_ips{ $neighbor } ) {
-				say STDERR BOLD BLACK "$hostname: neighbor $neighbor already visited"
+			if( $redis->hexists( 'omnidisco:visited_ips', $neighbor ) && ( time - $redis->hget( 'omnidisco:visited_ips', $neighbor ) < 3600 ) )  {
+				say STDERR BOLD BLACK "$hostname: neighbor $neighbor already visited"	
 			}
 			else {
-				$visited_ips{ $neighbor } = 1; #make sure we don't revisit it later
+				$redis->hset( 'omnidisco:visited_ips' , $neighbor => time );
 				new_task( $gearman , $neighbor )
 			}
+
+			# if ( $visited_ips{ $neighbor } ) {
+			# 	say STDERR BOLD BLACK "$hostname: neighbor $neighbor already visited"
+			# }
+			# else {
+			# 	$visited_ips{ $neighbor } = 1; #make sure we don't revisit it later
+			# 	new_task( $gearman , $neighbor )
+			# }
 		}
 	}
 }
