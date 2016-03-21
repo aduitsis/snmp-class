@@ -6,6 +6,7 @@ use warnings;
 use strict;
 use JSON;
 use Test::More qw(no_plan);
+use Data::Printer;
 
 BEGIN {
         use Data::Dumper;
@@ -57,8 +58,12 @@ my $fs2 = SNMP::Class::FactSet::Simple::unserialize( $serialized );
 ok( $fs2->count == 3 , 'serialized factset keeps the same number of items');
 
 my $json = $f1->TO_JSON;
+my $time = $f1->time;
+#say $json;
+#p from_json( $json );
+#p from_json( '{"time":'.$time.',"type":"test1","slots":{"gamma":"delta","alpha":"beta"}}' );
 ###is($json,'{"type":"test1","slots":{"gamma":"delta","alpha":"beta"}}','serialize object to json');
-is_deeply( from_json( $json ) , from_json( '{"type":"test1","slots":{"gamma":"delta","alpha":"beta"}}' ), 'serialize object to json');
+is_deeply( from_json( $json ) , from_json( '{"time":'.$time.',"type":"test1","slots":{"gamma":"delta","alpha":"beta"}}' ), 'serialize object to json');
 
 my $f4 = SNMP::Class::Fact::FROM_JSON( $json );
 my $f5 = SNMP::Class::Fact->new( json => $json );
@@ -69,7 +74,7 @@ ok( $f1->matches( $f5 ), 'json serialize and deserialize using TO_JSON and const
 
 
 $json = $f0->TO_JSON;
-ok( ( grep { $json eq $_ } ('{"type":"test1","slots":{}}','{"slots":{},"type":"test1"}') ) ,'serialize object to json');
+# ok( ( grep { $json eq $_ } ('{"type":"test1","slots":{}}','{"slots":{},"type":"test1"}') ) ,'serialize object to json');
 $f4 = SNMP::Class::Fact::FROM_JSON( $json );
 $f5 = SNMP::Class::Fact->new( json => $json );
 isa_ok($f4,'SNMP::Class::Fact');
@@ -86,3 +91,4 @@ for (my $i=0;$i<$fs3->count;$i++) {
 	ok( $fs3->item($i)->matches( $fs1->item($i) ) , "item $i matches" )
 }
 
+is( $fs1->time , $fs3->time , 'FactSet JSON serialization preserves time field' );

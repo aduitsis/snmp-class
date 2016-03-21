@@ -27,6 +27,12 @@ has 'fact_set' => (
 	default => sub { [] },
 );
 
+has 'time' => (
+        is => 'ro',
+        isa => 'Int',
+        required => 0,
+        default => sub { time }, #TODO: is something more accurate needed?
+);
 
 #declaring a reader attr for 'fact_set' does not satisfy Moose, unfortunately
 sub facts {
@@ -69,14 +75,16 @@ sub unserialize {
 }
 
 sub TO_JSON {
-	return '[' .  ( join ',',CORE::map { $_->TO_JSON } ( @{ $_[0]->facts } ) ) . ']';
-	JSON->new->utf8->allow_blessed->convert_blessed->encode( $_[0]->facts );
-	###to_json( $_[0]->facts, { allow_blessed => 1, convert_blessed => 1 } ) ;
+	return '{ "time": '. $_[0]->time . ', "fact_set": [' . ( join ',',CORE::map { $_->TO_JSON } ( @{ $_[0]->facts } ) ) . ']}';
+	# JSON->new->utf8->allow_blessed->convert_blessed->encode( $_[0]->facts );
 }	
 
 sub FROM_JSON {
 	my $data = decode_json $_[0];
-	__PACKAGE__->new( fact_set => [ map { SNMP::Class::Fact->new( type => $_->{type} , slots => $_->{slots} ) } @{ decode_json $_[0] } ] )
+	__PACKAGE__->new( 
+		time => $data->{ time},
+		fact_set => [ map { SNMP::Class::Fact->new( type => $_->{type} , slots => $_->{slots} ) } @{ $data->{fact_set} } ]
+	);
 }	
 
 1;
