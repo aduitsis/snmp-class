@@ -1,0 +1,14 @@
+Linux:
+
+libdata-printer-perl
+liblog-log4perl-perl
+libmoose-perl
+libyaml-perl
+libsnmp-perl
+libdigest-sha-perl
+libjson-perl
+libmodule-find-perl
+libio-all-perl
+libsereal-decoder-perl
+libsereal-encoder-perl
+libtest-exception-perl
