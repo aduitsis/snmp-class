@@ -8,7 +8,7 @@ use Log::Log4perl qw(:easy);
 my $logger = get_logger();
 use Scalar::Util;
 use List::Util qw(none any);
-use SNMP::Class::Fact; 
+use SNMP::Class::Fact;
 use Data::Printer;
 use Moose::Role;
 
@@ -35,15 +35,15 @@ sub each {
 			$filter{$i} = []
 		}
 	}
-	my @items = ( 
+	my @items = (
 		#if include_types is a thing, keep only those facts that have type in include_types, otherwise return true
-		grep { my $item = $_ ; @{ $filter{ include_types } }? any { $item->type eq $_ }  @{ $filter{ include_types } } : 1 } 
+		grep { my $item = $_ ; @{ $filter{ include_types } }? any { $item->type eq $_ }  @{ $filter{ include_types } } : 1 }
 			# sort the iteration by type alphabetically
-			sort { $a->type cmp $b->type } 
+			sort { $a->type cmp $b->type }
 				# keep only facts whose type is not in exclude_types arrayref
 				grep { my $item = $_ ; none { $item->type eq $_ } @{ $filter{ exclude_types } } }
 					#iterate over facts
-					@{ $self->facts } 
+					@{ $self->facts }
 	);
 	for (@items) {
 		$code->();
@@ -60,7 +60,7 @@ sub typeslots {
 	my $self = shift // die 'incorrect call';
 	my $type = shift // die 'incorrect call';
 	my $slot = shift // die 'incorrect call';
-	map { $_->slots->{ $slot } } 
+	map { $_->slots->{ $slot } }
 		@{ $self->grep( sub { $_->matches( type => $type ) } )->facts  }
 }
 
@@ -69,7 +69,7 @@ sub typeslot {
 	my $type = shift // die 'incorrect call';
 	my $slot = shift // die 'incorrect call';
 	my @arr = $self->typeslots( $type, $slot );
-	if ( ! @arr ) { 
+	if ( ! @arr ) {
 		$logger->logconfess("There are no facts of type $type with slot of type $slot in the factset.")
 	}
 	return $arr[0]
@@ -91,7 +91,7 @@ sub string_each {
 	local $_ = '(deffacts factset_'.$self->unique_id.' "" ';
 	$code->();
 	$self->each(
-		sub { 
+		sub {
 			local $_ = '(' . $_->to_string( exclude => $filter{ exclude_slots } ) .')';
 			$code->();
 		},
@@ -99,6 +99,13 @@ sub string_each {
 	);
 	$_ = ')';
 	$code->();
+}
+
+sub to_string {
+	my $self = shift // die 'incorrect call';
+	my @str;
+	$self->string_each( sub { push @str,$_ }, @_ );
+	return join("\n",@str)
 }
 
 1;
