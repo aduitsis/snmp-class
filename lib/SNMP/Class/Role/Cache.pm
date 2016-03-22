@@ -8,14 +8,14 @@ use Carp;
 use Data::Dumper;
 use SNMP::Class::Serializer;
 
-#this will pick one plugin under SNMP::Class::Role::Cache:: 
+#this will pick one plugin under SNMP::Class::Role::Cache::
 use SNMP::Class::PluggableImplementations ;
 
 use Log::Log4perl qw(:easy :nowarn);
 my $logger = get_logger();
 
 # these methods will probably be supplied by the plugin that was loaded
-requires( 'save' , 'load' , 'cache_exists' ) ; 
+requires( 'save' , 'load' , 'cache_exists' ) ;
 
 has 'preferred_lifetime' => (
 	is => 'rw',

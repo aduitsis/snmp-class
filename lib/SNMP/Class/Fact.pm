@@ -9,7 +9,7 @@ use List::Util qw(none);
 use Moose;
 use YAML qw(freeze thaw);
 use JSON;
-use Digest::SHA1 qw(sha1_hex);
+use SNMP::Class::SHA1 qw(sha1_hex);
 use SNMP::Class::Serializer;
 
 has 'type' => (
@@ -44,8 +44,8 @@ Returns a string representation of the fact, quoting values of slots as necessar
 slots is deterministic and doesn't change across invocations.
 
 The exclude argument can be used to ask for the exclusion of slot(s) name(s) from the string.
-The value of the exclude argument can be either a scalar value or an array reference with many 
-keys to be excluded. Example: 
+The value of the exclude argument can be either a scalar value or an array reference with many
+keys to be excluded. Example:
 
  $fact->to_string( exclude => 'engine_id' );
 

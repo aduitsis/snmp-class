@@ -14,7 +14,7 @@ use Moose;
 use Moose::Util::TypeConstraints;
 use YAML qw(freeze thaw);
 use JSON;
-use Digest::SHA1 qw(sha1_hex);	
+use SNMP::Class::SHA1 qw(sha1_hex);
 use Scalar::Util qw(blessed);
 
 with 'SNMP::Class::Role::FactSet';
@@ -42,7 +42,7 @@ sub facts {
 sub unique_id {
 	# order is not significant, FactSets with the same Facts in varying orders should
 	# produce the same unique_id. So we try to sort the Fact unique_ids to make the
-	# order deterministic. 
+	# order deterministic.
 	sha1_hex(
 		join('',
 			$_[0]->time,
