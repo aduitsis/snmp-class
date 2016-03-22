@@ -100,6 +100,7 @@ sub control_handler {
 	p %watchers;
 	my ($fh) = @_;
 	binmode( $fh, ":unix" );
+	use IO::Handle;
 	### say { $fh } "Hello, ready to accept commands";
 	print { $fh } 'omnidisco> ';
 	say STDERR "new connection from $fh";
@@ -107,6 +108,11 @@ sub control_handler {
 		fh	=> $fh,
 		poll	=> 'r',
 		cb	=> sub {
+
+			### WARNING!!! Messing with $_ can kill the entire event loop
+			### use local $_ before doing any stunts like reassigning $_
+			### for loops etc are smart enough to localize $_ , why not us
+			### 
 			### p @_;
 			### warn "io event <$_[0]>\n";
 			my $input = <$fh> // do {
@@ -128,26 +134,22 @@ sub control_handler {
 						$options{ $+{key} } = $+{value};
 					}
 				}
-				my $id = $redis->get( "omnidisco:factset_index:$query" );
-				if( defined( $id ) ) {
-					my $result = $redis->get( "omnidisco:factset:$id" ); 
-					if( defined( $result ) ) {
-						my $fact_set = SNMP::Class::FactSet::Simple::unserialize( $result );
-						for my $fact ( @{ $fact_set->facts} ) {
-							next if( $bare && ( $fact->type ne $bare ) );
-							say { $fh } $fact->to_string( exclude => 'engine_id' );
-						}
-					}
-					else {
-						say { $fh } "Unfortunately it seems that the cached result for $query has expired";
-					}
+				my $fact_set = store_query( $query );
+				if ( defined( $fact_set ) ) { 
+					$fact_set->string_each( 
+						sub { 
+							say { $fh } $_;
+						}, 
+						include_types => $bare // [],
+						exclude_slots => 'engine_id',
+					);
 				}
 				else {
-					say { $fh } "don't know anything about $query";
+					say { $fh } "Unfortunately it seems that $query has expired or does not exist";
 				}
 			}
 			elsif( $input =~ /^\s*(list|ls|devices|show\s+devices|inv)\s*$/ ) {
-				my @result = $redis->keys( 'omnidisco:factset_index:*' );
+				my @result = store_keys();
 				if( @result ) {
 					say { $fh } join("\n",map { ($_ =~ /^omnidisco:factset_index:(.+)$/)? $1 : ()  } @result )
 				}
@@ -238,66 +240,75 @@ sub factset_processor {
 	my $sysname = get_sysname( $fact_set );
 	my @neighbors = get_neighbors( $fact_set );
 	my @ipv4s = grep { $_ ne '127.0.0.1' } get_ipv4s( $fact_set );
-	#$visited_ips{ $_ } =  1 for ( @ipv4s ) ;
-	$redis->hset('omnidisco:visited_ips', $_ => time ) for ( @ipv4s ) ;
 	say STDERR BOLD BLACK "$hostname: sysname is $sysname";
 	say STDERR BOLD BLACK "$hostname: neighbors are: ".join(' , ',@neighbors);
 	say STDERR BOLD BLACK "$hostname: host IPv4 addresses are: ".join(' , ',@ipv4s);
-	# state $counter = 1;
-	# say '(deffacts snmp_knowledge_'.$counter++.' "facts on '.$sysname.'"';
-	# for( @{ $fact_set->facts } ) {
-	# 	say '('.$_->to_string.')';
-	# }
-        # say ')';
+	#say STDERR BOLD BLACK $fact_set->to_string( exclude_slots => 'engine_id' ) ;
+	store_insert( $hostname , $fact_set );
+	if ( $recurse ) {
+		for my $neighbor ( @neighbors ) {
+			if( store_is_visited( $neighbor ) )  {
+				say STDERR BOLD BLACK "$hostname: neighbor $neighbor already visited"	
+			}
+			else {
+				store_set_visited( $neighbor );
+				new_task( $gearman , $neighbor )
+			}
+		}
+	}
+}
+
+sub store_keys {
+	$redis->keys('omnidisco:factset_index:*');
+}
+
+sub store_query {
+	my $query = shift // die 'incorrect call, missing query key';
+	my $id = $redis->get( "omnidisco:factset_index:$query" );
+	if( defined( $id ) ) {
+		my $result = $redis->get( "omnidisco:factset:$id" ); 
+		if( defined( $result ) ) {
+			return SNMP::Class::FactSet::Simple::unserialize( $result )
+		}
+		else {
+			return
+		}
+	}
+	else {
+		return
+	}
+}
+
+sub store_insert {
+	my $hostname = shift // die 'missing hostname';
+	my $fact_set = shift // die 'missing fact_set';
+	my $sysname = get_sysname( $fact_set );
+	my @neighbors = get_neighbors( $fact_set );
+	my @ipv4s = grep { $_ ne '127.0.0.1' } get_ipv4s( $fact_set );
+	store_set_visited( @ipv4s ) ;
 	$redis->set('omnidisco:factset:'.$fact_set->unique_id => $fact_set->serialize , 'EX' => 3600 );
 	for my $key ( $hostname , $sysname , @ipv4s ) {
 		# $fact_sets->{ $key } = $fact_set;
 		$redis->set("omnidisco:factset_index:$key", => $fact_set->unique_id , 'EX' => 3600 );
 	}
-	if ( $recurse ) {
-		for my $neighbor ( @neighbors ) {
-			if( $redis->hexists( 'omnidisco:visited_ips', $neighbor ) && ( time - $redis->hget( 'omnidisco:visited_ips', $neighbor ) < 3600 ) )  {
-				say STDERR BOLD BLACK "$hostname: neighbor $neighbor already visited"	
-			}
-			else {
-				$redis->hset( 'omnidisco:visited_ips' , $neighbor => time );
-				new_task( $gearman , $neighbor )
-			}
+}
 
-			# if ( $visited_ips{ $neighbor } ) {
-			# 	say STDERR BOLD BLACK "$hostname: neighbor $neighbor already visited"
-			# }
-			# else {
-			# 	$visited_ips{ $neighbor } = 1; #make sure we don't revisit it later
-			# 	new_task( $gearman , $neighbor )
-			# }
-		}
-	}
+sub store_is_visited {
+	( $redis->hexists( 'omnidisco:visited_ips', $_[0] ) && ( time - $redis->hget( 'omnidisco:visited_ips', $_[0] ) < 3600 ) )
+}
+sub store_set_visited {
+	$redis->hset('omnidisco:visited_ips', $_ => time ) for ( @_ ) ;
 }
 
 sub get_sysname {
-	$_[0]->grep(sub{ $_->matches( type => 'snmp_agent' ) })->item(0)->slots->{'system'};
+	# $_[0]->grep(sub{ $_->matches( type => 'snmp_agent' ) })->item(0)->slots->{'system'};
+	$_[0]->typeslot( 'snmp_agent' , 'system' )
 }
 
 sub get_ipv4s {
-	typeslot( $_[0], 'ipv4', 'ipv4' )
+	$_[0]->typeslots( 'ipv4', 'ipv4' )
 }
 
 sub get_neighbors {
-	typeslot( $_[0], 'cdp_neighbor', 'address' )
-	### map { $_->slots->{ address } } @{ $_[0]->grep( sub { $_->matches( type => 'cdp_neighbor' ) } )->fact_set  }
-}
-
-=head2 typeslot($fact_set,$type,$slot)
-
-Searches $fact_set for facts of type $type having a slot $slot, and returns the values of those slots.
-
-=cut
-
-
-sub typeslot {
-	my $fact_set = shift // die 'incorrect call';
-	my $type = shift // die 'incorrect call';
-	my $slot = shift // die 'incorrect call';
-	map { $_->slots->{ $slot } } @{ $fact_set->grep( sub { $_->matches( type => $type ) } )->fact_set  }
+	$_[0]->typeslots( 'cdp_neighbor', 'address' )
 }

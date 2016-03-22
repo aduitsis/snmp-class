@@ -46,7 +46,7 @@ sub unique_id {
 	sha1_hex(
 		join('',
 			$_[0]->time,
-			sort map { $_->unique_id } @{ $_[0]->facts }
+			sort { $a cmp $b } map { $_->unique_id } @{ $_[0]->facts }
 		)
 	);
 }
@@ -95,7 +95,7 @@ sub FROM_JSON {
 	my $data = decode_json $_[0];
 	__PACKAGE__->new( 
 		time => $data->{ time},
-		fact_set => [ map { SNMP::Class::Fact->new( type => $_->{type} , slots => $_->{slots} ) } @{ $data->{fact_set} } ],
+		fact_set => [ map { SNMP::Class::Fact->new( time => $_->{time} , type => $_->{type} , slots => $_->{slots} ) } @{ $data->{fact_set} } ],
 	);
 }	
 

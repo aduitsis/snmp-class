@@ -100,4 +100,16 @@ for (my $i=0;$i<$fs3->count;$i++) {
 }
 
 is( $fs1->time , $fs3->time , 'FactSet JSON serialization preserves time field' );
+#say $fs1->TO_JSON;
+#say $fs3->TO_JSON;
 is($fs1->unique_id,$fs3->unique_id,'factset json serialization preserves the unique id');
+
+is( $fs1->to_string , "(deffacts knowledge_".$fs1->unique_id." \"\" \n(test1 (alpha \"beta\") (gamma \"delta\"))\n(test1 (alpha \"beta\") (gamma \"delta\"))\n(test1 (alpha \"beta\") (gamma \"delta\"))\n)", 'FactSet to_string without arguments'); 
+is( $fs1->to_string( exclude_slots => 'alpha' ) , "(deffacts knowledge_".$fs1->unique_id." \"\" \n(test1 (gamma \"delta\"))\n(test1 (gamma \"delta\"))\n(test1 (gamma \"delta\"))\n)", 'FactSet to_string without arguments and scalar exclude_slots'); 
+is( $fs1->to_string( exclude_slots => ['alpha'] ) , "(deffacts knowledge_".$fs1->unique_id." \"\" \n(test1 (gamma \"delta\"))\n(test1 (gamma \"delta\"))\n(test1 (gamma \"delta\"))\n)", 'FactSet to_string without arguments and arrayref exclude_slots'); 
+$fs1->push(SNMP::Class::Fact->new(type=>'foo',slots=>{ a => 'b' }));
+is( $fs1->to_string( exclude_slots => 'alpha', exclude_types => 'foo' ) , "(deffacts knowledge_".$fs1->unique_id." \"\" \n(test1 (gamma \"delta\"))\n(test1 (gamma \"delta\"))\n(test1 (gamma \"delta\"))\n)", 'FactSet to_string without arguments and scalar exclude_slots and scalar exclude_types'); 
+is( $fs1->to_string( exclude_slots => 'alpha', exclude_types => [ 'foo' ] ) , "(deffacts knowledge_".$fs1->unique_id." \"\" \n(test1 (gamma \"delta\"))\n(test1 (gamma \"delta\"))\n(test1 (gamma \"delta\"))\n)", 'FactSet to_string without arguments and scalar exclude_slots and arrayref exclude_types'); 
+is( $fs1->to_string( include_types=> 'foo', exclude_slots => 'alpha'  ) , "(deffacts knowledge_".$fs1->unique_id." \"\" \n(foo (a \"b\"))\n)", 'FactSet to_string without arguments and scalar exclude_slots and scalar include_types'); 
+is( $fs1->to_string( include_types=> ['foo'], exclude_slots => 'alpha'  ) , "(deffacts knowledge_".$fs1->unique_id." \"\" \n(foo (a \"b\"))\n)", 'FactSet to_string without arguments and scalar exclude_slots and arrayref include_types'); 
+
