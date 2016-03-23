@@ -39,7 +39,7 @@ has expiry => (
 	default	=> 3600,
 );
 
-sub BUILDARGS { 
+sub BUILDARGS {
 	my $class = shift // die 'missing class argument';
 	if( @_ == 1 ) {
 		return { server => shift };
@@ -50,8 +50,8 @@ sub BUILDARGS {
 }
 
 sub BUILD {
-	$logger->info('connected to redis '.$_[0]->server.':'.$_[0]->port);
 	$_[0]->_set_redis( Redis->new( server => $_[0]->server.':'.$_[0]->port ) );
+	$logger->info('connected to redis '.$_[0]->server.':'.$_[0]->port);
 }
 
 sub keys {
