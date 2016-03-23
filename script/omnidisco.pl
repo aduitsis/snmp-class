@@ -20,10 +20,12 @@ use Data::Printer;
 
 use lib $Bin.'/../lib';
 use SNMP::Class;
+use SNMP::Class::KeyStore::Redis;
 
 binmode( STDOUT, ":unix" );
 
 $Term::ANSIColor::AUTORESET = 1;
+
 
 
 use Redis;
@@ -40,6 +42,8 @@ my @seed;
 my $redis_server;
 
 GetOptions( 'redis=s' => \$redis_server , 's=s' => \@job_servers , 'r' => \$recurse , 'seed=s' => \@seed , 'query-all-vlans' => \$query_all_vlans );
+
+my $store = SNMP::Class::KeyStore::Redis->new( $redis_server );
 
 my @redis_args = ();
 if( defined ( $redis_server ) ) {
@@ -121,10 +125,15 @@ sub control_handler {
 				return
 			};
 			chomp $input;
-			if( my ( $target ) = ( $input =~ /^(?:add|walk|target)\s+(\S+)$/ ) ) {
+			if( my ( $target , $rest ) = ( $input =~ /^(?:add|walk|target)\s+(\S+)\s*(.*)$/ ) ) {
 				say { $fh } "Asked to query $target";
-				new_task( $gearman , $target );
-				$alert_condvar->send("job submitted for $target");
+				if( ( $rest !~ /force/) && $store->query( $target ) ) {
+					say { $fh } 'Already exists, please use force to re-acquire';
+				}
+				else {
+					new_task( $gearman , $target );
+					$alert_condvar->send("job submitted for $target");
+				}
 			}
 			elsif( my ( $query, $rest ) = ( $input =~ /^(?:info|show|examine|sh)\s+(\S+)(.*)$/ ) ) {
 				my (%options,$bare);
@@ -134,7 +143,7 @@ sub control_handler {
 						$options{ $+{key} } = $+{value};
 					}
 				}
-				my $fact_set = store_query( $query );
+				my $fact_set = $store->query( $query );
 				if ( defined( $fact_set ) ) { 
 					$fact_set->string_each( 
 						sub { 
@@ -149,9 +158,9 @@ sub control_handler {
 				}
 			}
 			elsif( $input =~ /^\s*(list|ls|devices|show\s+devices|inv)\s*$/ ) {
-				my @result = store_keys();
+				my @result = $store->keys();
 				if( @result ) {
-					say { $fh } join("\n",map { ($_ =~ /^omnidisco:factset_index:(.+)$/)? $1 : ()  } @result )
+					say { $fh } join("\n",@result )
 				}
 			}
 			#elsif( $input =~ /^dump.*fact/ ) {
@@ -244,60 +253,19 @@ sub factset_processor {
 	say STDERR BOLD BLACK "$hostname: neighbors are: ".join(' , ',@neighbors);
 	say STDERR BOLD BLACK "$hostname: host IPv4 addresses are: ".join(' , ',@ipv4s);
 	#say STDERR BOLD BLACK $fact_set->to_string( exclude_slots => 'engine_id' ) ;
-	store_insert( $hostname , $fact_set );
+	$store->insert( $fact_set, $hostname, $sysname, @ipv4s );
+	$store->set_visited( @ipv4s );
 	if ( $recurse ) {
 		for my $neighbor ( @neighbors ) {
-			if( store_is_visited( $neighbor ) )  {
+			if( $store->is_visited( $neighbor ) )  {
 				say STDERR BOLD BLACK "$hostname: neighbor $neighbor already visited"	
 			}
 			else {
-				store_set_visited( $neighbor );
+				$store->set_visited( $neighbor );
 				new_task( $gearman , $neighbor )
 			}
 		}
 	}
-}
-
-sub store_keys {
-	$redis->keys('omnidisco:factset_index:*');
-}
-
-sub store_query {
-	my $query = shift // die 'incorrect call, missing query key';
-	my $id = $redis->get( "omnidisco:factset_index:$query" );
-	if( defined( $id ) ) {
-		my $result = $redis->get( "omnidisco:factset:$id" ); 
-		if( defined( $result ) ) {
-			return SNMP::Class::FactSet::Simple::unserialize( $result )
-		}
-		else {
-			return
-		}
-	}
-	else {
-		return
-	}
-}
-
-sub store_insert {
-	my $hostname = shift // die 'missing hostname';
-	my $fact_set = shift // die 'missing fact_set';
-	my $sysname = get_sysname( $fact_set );
-	my @neighbors = get_neighbors( $fact_set );
-	my @ipv4s = grep { $_ ne '127.0.0.1' } get_ipv4s( $fact_set );
-	store_set_visited( @ipv4s ) ;
-	$redis->set('omnidisco:factset:'.$fact_set->unique_id => $fact_set->serialize , 'EX' => 3600 );
-	for my $key ( $hostname , $sysname , @ipv4s ) {
-		# $fact_sets->{ $key } = $fact_set;
-		$redis->set("omnidisco:factset_index:$key", => $fact_set->unique_id , 'EX' => 3600 );
-	}
-}
-
-sub store_is_visited {
-	( $redis->hexists( 'omnidisco:visited_ips', $_[0] ) && ( time - $redis->hget( 'omnidisco:visited_ips', $_[0] ) < 3600 ) )
-}
-sub store_set_visited {
-	$redis->hset('omnidisco:visited_ips', $_ => time ) for ( @_ ) ;
 }
 
 sub get_sysname {
