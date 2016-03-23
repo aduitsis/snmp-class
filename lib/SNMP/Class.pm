@@ -36,8 +36,7 @@ use Carp;
 use Data::Dumper;
 
 # we will need this to produce the unique id
-#use Digest::SHA1 qw(sha1_hex);
-use SNMP::Class::SHA1 qw(sha1_hex);
+use Digest::SHA qw(sha1_hex);
 
 
 #load our own

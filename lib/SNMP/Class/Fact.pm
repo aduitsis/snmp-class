@@ -9,7 +9,7 @@ use List::Util qw(none);
 use Moose;
 use YAML qw(freeze thaw);
 use JSON;
-use SNMP::Class::SHA1 qw(sha1_hex);
+use Digest::SHA qw(sha1_hex);
 use SNMP::Class::Serializer;
 
 has 'type' => (
