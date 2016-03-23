@@ -12,7 +12,11 @@ libio-all-perl
 libsereal-decoder-perl
 libsereal-encoder-perl
 libtest-exception-perl
-
+libanyevent-gearman-perl
+libfile-slurp-perl
+libredis-perl
+libgearman-client-perl
+libnet-server-perl
 
 FreeBSD:
 (dumping package list from a good working FreeBSD 9.3 system)
