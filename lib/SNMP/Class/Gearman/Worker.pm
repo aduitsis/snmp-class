@@ -53,6 +53,21 @@ sub spawn_worker {
 	#father will return to spawn more processes or wait
 	return $pid if($pid > 0);
 
+	#now we are the child. We can setup a friendly signal handler
+	$SIG{INT} = sub {
+		# ignore any repetitions of the signal
+		local $SIG{INT}='IGNORE';
+		die "Child $id caught signal SIGINT ... exiting";
+	};
+	$SIG{TERM} = sub {
+		# ignore any repetitions of the signal
+		local $SIG{TERM}='IGNORE';
+		die "Child $id caught signal SIGTERM ... exiting";
+	};
+
+	#also change the process name
+	$0 = "omnidisco worker $id $function_name";
+
 	my $worker = Gearman::Worker->new;
 	$worker->job_servers(@{$job_servers});
 	$worker->register_function( $function_name => generate_worker($id, $json)); #keep in mind, gather_worker returns a sub
