@@ -43,7 +43,13 @@ my $redis_server;
 
 GetOptions( 'redis=s' => \$redis_server , 's=s' => \@job_servers , 'r' => \$recurse , 'seed=s' => \@seed , 'query-all-vlans' => \$query_all_vlans );
 
-my $store = SNMP::Class::KeyStore::Redis->new( $redis_server );
+my $store;
+if( $redis_server ) {
+	$store = SNMP::Class::KeyStore::Redis->new( $redis_server );
+}
+else {
+	die 'no store implementations available';
+}
 
 my @redis_args = ();
 if( defined ( $redis_server ) ) {
@@ -116,7 +122,7 @@ sub control_handler {
 			### WARNING!!! Messing with $_ can kill the entire event loop
 			### use local $_ before doing any stunts like reassigning $_
 			### for loops etc are smart enough to localize $_ , why not us
-			### 
+			###
 			### p @_;
 			### warn "io event <$_[0]>\n";
 			my $input = <$fh> // do {
@@ -135,20 +141,20 @@ sub control_handler {
 					$alert_condvar->send("job submitted for $target");
 				}
 			}
-			elsif( my ( $query, $rest ) = ( $input =~ /^(?:info|show|examine|sh)\s+(\S+)(.*)$/ ) ) {
+			elsif( my ( $query, $rest2 ) = ( $input =~ /^(?:info|show|examine|sh)\s+(\S+)(.*)$/ ) ) {
 				my (%options,$bare);
-				if( $rest ) {
-					( $bare ) = ( $rest =~ /^\s*([^= ]+)\s*/ );
-					while( $rest =~ /\s*(?<key>\S+)\s*=\s*(?<value>\S+)(?:\s+|$)/g ) {
+				if( $rest2 ) {
+					( $bare ) = ( $rest2 =~ /^\s*([^= ]+)\s*/ );
+					while( $rest2 =~ /\s*(?<key>\S+)\s*=\s*(?<value>\S+)(?:\s+|$)/g ) {
 						$options{ $+{key} } = $+{value};
 					}
 				}
 				my $fact_set = $store->query( $query );
-				if ( defined( $fact_set ) ) { 
-					$fact_set->string_each( 
-						sub { 
+				if ( defined( $fact_set ) ) {
+					$fact_set->string_each(
+						sub {
 							say { $fh } $_;
-						}, 
+						},
 						include_types => $bare // [],
 						exclude_slots => 'engine_id',
 					);
