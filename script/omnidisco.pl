@@ -91,6 +91,9 @@ my $gearman = connect_to_gearman ;
 
 my $guard = tcp_server 'unix/', "$Bin/control.sock", \&control_handler;
 
+#job list for this worker
+my %jobs;
+
 
 # watchers are the open connections to this daemon from users
 # alert transmits messages to all open connections
@@ -186,6 +189,9 @@ sub control_handler {
 				${ $var } = $value;
 				use strict 'refs';
 			}
+			elsif( $input =~ /^\s*j(obs|)\s*$/i ) {
+				say { $fh } join("\n",map { sprintf("%4d\t%s",$_,$jobs{$_}) } sort { $a <=> $b } keys %jobs);
+			}
 			elsif( $input =~ /^(quit|exit)/i ) {
 				$quit_program->send
 			}
@@ -220,35 +226,44 @@ sub new_task {
 	my $hostname = shift // die 'incorrect call';
 	my $community = shift // 'public';
 	my $timeout = shift // 5000000;
-	say STDERR GREEN "$hostname: adding task";
+
+	state $task_id; $task_id++;
+	$jobs{ $task_id } = $hostname;
+
+	say STDERR GREEN "$hostname: adding task #$task_id";
 	my %rest;
 	$rest{ elastic_servers } = $elastic_servers if $elastic_servers;
 	my $task = Dump(  [ hostname => $hostname , community => 'public' , timeout => $timeout , query_all_vlans => ($query_all_vlans? 1 : 0, ), %rest ] );
 	$gearman->add_task( 'snmp_gather' => $task,
-		on_complete	=> generate_completion_handler($gearman,$hostname),
-		on_fail		=> generate_failure_handler($hostname),
+		on_complete	=> generate_completion_handler($gearman,$hostname,$task_id),
+		on_fail		=> generate_failure_handler($hostname,$task_id),
 	);
 	say STDERR GREEN "$hostname: submitted"
 }
 
 sub generate_completion_handler {
-	my $gearman = shift // die 'missing gearman';
-	my $hostname = shift // die 'missing hostname';
+	my $gearman	= shift // die 'missing gearman';
+	my $hostname	= shift // die 'missing hostname';
+	my $task_id	= shift // die 'missing task id';
 	sub {
 		### p $_[1];
-		say STDERR GREEN "$hostname: gather completed";
+		say STDERR GREEN "$hostname: gather task #$task_id completed";
 		my $fact_set = SNMP::Class::FactSet::Simple::unserialize( $_[1] ) ;
 		factset_processor( $gearman , $hostname, $fact_set ) ;
 		say STDERR GREEN "$hostname: processing completed";
-		$alert_condvar->send("job completed for $hostname");
+		$alert_condvar->send("job $task_id completed for $hostname");
+		delete $jobs{ $task_id };
 
 	}
 }
 
 sub generate_failure_handler {
-	my $hostname = shift // die 'incorrect call';
+	my $hostname	= shift // die 'incorrect call';
+	my $task_id	= shift // die 'missing task id';
 	sub {
-		say STDERR RED "job for $hostname FAILED";
+		say STDERR RED "job $task_id for $hostname FAILED";
+		$alert_condvar->send("job $task_id for $hostname FAILED");
+		delete $jobs{ $task_id };
 	}
 }
 
