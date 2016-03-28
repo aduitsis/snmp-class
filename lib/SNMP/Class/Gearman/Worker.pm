@@ -10,6 +10,7 @@ use warnings;
 use Carp;
 use Data::Dumper;
 use SNMP::Class;
+use SNMP::Class::Elastic;
 use Scalar::Util;
 use Gearman::Worker;
 use YAML;
@@ -144,6 +145,11 @@ sub gather {
 		$logger->debug('will return JSON');
 	}
 
+	my $elastic;
+	if( exists( $args{ elastic_servers } ) ) {
+		$elastic = $args{ elastic_servers }; 
+	}
+
 
 	#for( @{ $s->fact_set->facts } ) {
 	#	$logger->info($_->to_string);
@@ -205,6 +211,13 @@ sub gather {
 
 	for( @{ $s->fact_set->facts } ) {
 		$logger->debug($_->to_string);
+	}
+
+	#
+	if($elastic) {
+		$logger->info('inserting result into '.join(',',@{$elastic}));
+		my $e = SNMP::Class::Elastic->new( nodes => $elastic );
+		$e->bulk_index( $s->fact_set );	
 	}
 
 	if( $return_json ) {

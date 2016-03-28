@@ -41,7 +41,9 @@ my @seed;
 
 my $redis_server;
 
-GetOptions( 'redis=s' => \$redis_server , 's=s' => \@job_servers , 'r' => \$recurse , 'seed=s' => \@seed , 'query-all-vlans' => \$query_all_vlans );
+GetOptions( 'redis=s' => \$redis_server , 'elastic=s' => \my @elastic_servers,  'gear|gearman|s=s' => \@job_servers , 'r' => \$recurse , 'seed=s' => \@seed , 'query-all-vlans' => \$query_all_vlans );
+
+my $elastic_servers = @elastic_servers ? \@elastic_servers : undef; 
 
 my $store;
 if( $redis_server ) {
@@ -219,7 +221,9 @@ sub new_task {
 	my $community = shift // 'public';
 	my $timeout = shift // 5000000;
 	say STDERR GREEN "$hostname: adding task";
-	my $task = Dump(  [ hostname => $hostname , community => 'public' , timeout => $timeout , query_all_vlans => ($query_all_vlans? 1 : 0 ) ] );
+	my %rest;
+	$rest{ elastic_servers } = $elastic_servers if $elastic_servers;
+	my $task = Dump(  [ hostname => $hostname , community => 'public' , timeout => $timeout , query_all_vlans => ($query_all_vlans? 1 : 0, ), %rest ] );
 	$gearman->add_task( 'snmp_gather' => $task,
 		on_complete	=> generate_completion_handler($gearman,$hostname),
 		on_fail		=> generate_failure_handler($hostname),
