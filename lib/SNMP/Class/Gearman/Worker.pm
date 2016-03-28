@@ -100,7 +100,7 @@ sub generate_worker {
 		$logger->info("worker $id told to gather_worker with args: ".join(',',@{$arg}));
 
 		#create a session, walk some oids
-		my $str = gather(@{$arg}, json => $json);
+		my $str = gather(@{$arg}, json => $json, id => $id );
 
 		$logger->info("worker $id finished");
 
@@ -127,6 +127,9 @@ sub gather {
 	my $s = SNMP::Class->new(@_);
 
 	my %args = ( @_ );
+
+	my $id = $args{ id } // die 'missing worker id';
+
 	if( exists( $args{ personalities } ) ) {
 		$s->prime( @{ $args{ personalities } } )
 	}
@@ -142,7 +145,7 @@ sub gather {
 	my $return_json;
 	if( exists( $args{ json } ) && $args{ json } ) {
 		$return_json = 1;
-		$logger->debug('will return JSON');
+		$logger->debug("$id: will return JSON");
 	}
 
 	my $elastic;
@@ -170,13 +173,13 @@ sub gather {
 			$personality = 'SNMP::Class::Role::Personality::VmVlan';
 		}
 		else {
-			$logger->warn('No available way to query vlans')
+			$logger->warn("$id: No available way to query vlans")
 		}
 
 		if( $method ) {
 			my $original_community = $s->community;
 			for( $s->$method ) {
-				$logger->info("doing instance vlan $_ with " . $original_community . '@' . $_ . ' using the ' . $method . ' method of ' . $personality );
+				$logger->info("$id: doing instance vlan $_ with " . $original_community . '@' . $_ . ' using the ' . $method . ' method of ' . $personality );
 
 				$s->change_community( $original_community . '@' . $_ );
 
@@ -190,7 +193,7 @@ sub gather {
 
 	# now the $s is primed with SNMP data
 	# let's trigger the creation of all facts
-	$logger->info('calculating facts');
+	$logger->info("$id: calculating facts");
 	$s->calculate_facts;
 
 	$s->fact_set->push( SNMP::Class::Fact->new(
@@ -198,6 +201,7 @@ sub gather {
 		slots	=> {
 			start_time	=> $start_time,
 			stop_time	=> $stop_time,
+			duration	=> ( $stop_time - $start_time ), #for convenience
 			target		=> $s->hostname,
 			community	=> $s->community,
 			port		=> $s->port,
@@ -206,6 +210,9 @@ sub gather {
 			version		=> $s->version,
 			system		=> $s->sysname,
 			engine_id	=> $s->engine_id,
+			fact_count	=> $s->fact_set->count,#this will be one too few, because current fact doesn't count
+			varbind_count	=> $s->number_of_items,
+			worker		=> $id,
 		},
 	));
 
@@ -215,7 +222,7 @@ sub gather {
 
 	#
 	if($elastic) {
-		$logger->info('inserting result into '.join(',',@{$elastic}));
+		$logger->info("$id: inserting result into ".join(',',@{$elastic}));
 		my $e = SNMP::Class::Elastic->new( nodes => $elastic );
 		$e->bulk_index( $s->fact_set );	
 	}
