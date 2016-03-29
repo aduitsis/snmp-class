@@ -1,7 +1,11 @@
 package SNMP::Class::Role::Implementation;
 use Log::Log4perl qw(:easy);
-
+my $logger=Log::Log4perl->get_logger();
+use SNMP::Class::Exception;
+use Try::Tiny;
+use Scalar::Util qw(blessed);
 use Moose::Role;
+
 
 requires qw(snmpget snmpwalk snmpbulkwalk snmpset init);
 
@@ -116,10 +120,42 @@ sub walk {
 	LOOP: while(1) {
 		
 		####my $varbind = $vb->generate_varbind;
+		my $terminate_loop;
 
 		#call an SNMP GETNEXT operation
-		my $returned_vb = $self->snmpgetnext($rolling_oid);
-		DEBUG $returned_vb->to_varbind_string;
+		# if this succeeds, we will get the result assigned to returned_vb
+		# if snmpgetnext fails, we will get the exception in $_
+		my $returned_vb = try { 
+			$self->snmpgetnext($rolling_oid) 
+		} 
+		catch {
+			# just save the exception and we'll deal with it after the catch returns
+			$terminate_loop = $_;
+		};
+
+		if ( defined( $terminate_loop ) ) {
+			if( blessed( $terminate_loop ) && $terminate_loop->isa('SNMP::Class::Exception') ) {
+				if( $terminate_loop->error eq 'no_such_name' ) {
+					# the case of noSuchName (per RFC1157) is not a strict error when
+					# doing snmpgetnext and we should not die. Rather, there are no
+					# other variables in the agent after the current rolling_oid. So,
+					# we'll just issue a debug message and exit the loop normally.
+					$logger->debug('getnext of '.$rolling_oid->to_string.' returned no_such_name');
+					last LOOP
+				}
+				else {
+					$logger->warn('snmpgetnext returned exception with error '.$terminate_loop->error);
+					# we don't know what is this error, so let's just die by throwing the $_ error
+					$terminate_loop->throw
+				}
+			}
+			else {
+				# this means that snmpgetnext died without throwing a Throwable object. We will logconfess to get a stack trace
+				$logger->logconfess('snmpgetnext returned an error that is not an SNMP::Class::Exception. Here it is: '.$terminate_loop);
+			}
+		}
+
+		$logger->debug($returned_vb->to_varbind_string);
 		
 		#handle some special types
 		#For example, a type of ENDOFMIBVIEW means we should stop

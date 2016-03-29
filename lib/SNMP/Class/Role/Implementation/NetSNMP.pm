@@ -2,7 +2,8 @@ package SNMP::Class::Role::Implementation::NetSNMP;
 
 use Moose::Role;
 use SNMP::Class::Role::Implementation;
-
+use SNMP::Class::Exception;
+use Data::Printer;
 use Log::Log4perl qw(:easy);
 my $logger = Log::Log4perl->get_logger();
 
@@ -117,7 +118,18 @@ sub snmpgetnext {
 	my $netsnmp_varbind = $vb->generate_netsnmpvarbind;
 	
 	my $value = $self->session->getnext($netsnmp_varbind);
-	die $self->session->{ErrorStr}.' while trying to getnext '.$vb->to_string if ($self->session->{ErrorNum} != 0);
+	if ($self->session->{ErrorNum} != 0) {
+		# we will throw the exception with ErrorNum in the error attribute. The caller 
+		# will be able to take a look at it and understand what went wrong. 
+		#
+		# for ErrorNum 2(noSuchName), RFC1157 says that
+		# this will happen if what was asked does not lexicographically
+		# precede the name of some object available for get operations
+		SNMP::Class::Exception->throw({
+			message	=> 'Error '.$self->session->{ErrorNum}.' '.$self->session->{ErrorStr}.' while trying to getnext '.$vb->to_string,
+			error	=> ($self->session->{ErrorNum} == 2)? 'no_such_name' : 'Unknown error with ErrorNum '.$self->session->{ErrorNum},
+		});
+	}
 	
 	return SNMP::Class::Varbind->new(varbind=>$netsnmp_varbind);
 
