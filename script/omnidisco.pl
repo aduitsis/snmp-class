@@ -41,7 +41,7 @@ my @seed;
 
 my $redis_server;
 
-GetOptions( 'redis=s' => \$redis_server , 'elastic=s' => \my @elastic_servers,  'gear|gearman|s=s' => \@job_servers , 'r' => \$recurse , 'seed=s' => \@seed , 'query-all-vlans' => \$query_all_vlans );
+GetOptions( 'redis=s' => \$redis_server , 'elastic=s' => \my @elastic_servers,  'gear|gearman|s=s' => \@job_servers , 'r' => \$recurse , 'seedfile=s' => \ my @seedfile, 'seed=s' => \@seed , 'query-all-vlans' => \$query_all_vlans );
 
 my $elastic_servers = @elastic_servers ? \@elastic_servers : undef; 
 
@@ -214,6 +214,14 @@ sub control_handler {
 
 
 #this is done only once, upon program invocation
+for(@seedfile) {
+	open my $seedfile,'<',$_ or die $!;
+	my @targets = (<$seedfile>);
+	chomp @targets;
+	close $seedfile;
+	push @seed,@targets;
+}
+say STDERR 'seed is '.join(',',@seed) if @seed;
 new_task( $gearman, $_ ) for(@seed);
 
 say STDERR GREEN 'Startup complete, entering event loop';
