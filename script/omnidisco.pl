@@ -41,7 +41,16 @@ my @seed;
 
 my $redis_server;
 
-GetOptions( 'redis=s' => \$redis_server , 'elastic=s' => \my @elastic_servers,  'gear|gearman|s=s' => \@job_servers , 'r' => \$recurse , 'seedfile=s' => \ my @seedfile, 'seed=s' => \@seed , 'query-all-vlans' => \$query_all_vlans );
+GetOptions( 
+	'redis=s'		=> \$redis_server,
+	'elastic=s'		=> \my @elastic_servers,
+	'gear|gearman|s=s'	=> \@job_servers,
+	'r'			=> \$recurse,
+	'seedfile=s'		=> \ my @seedfile,	
+	'seed=s'		=> \@seed,	
+	'query-all-vlans'	=> \$query_all_vlans,
+	'exit-on-empty'		=> \ my $exit_on_empty,
+);
 
 my $elastic_servers = @elastic_servers ? \@elastic_servers : undef; 
 
@@ -213,6 +222,9 @@ sub control_handler {
 }
 
 
+# record the start time
+my $start_time = time;
+
 #this is done only once, upon program invocation
 for(@seedfile) {
 	open my $seedfile,'<',$_ or die $!;
@@ -261,7 +273,7 @@ sub generate_completion_handler {
 		say STDERR GREEN "$hostname: processing completed";
 		$alert_condvar->send("job $task_id completed for $hostname");
 		delete $jobs{ $task_id };
-
+		general_completion_procedure();
 	}
 }
 
@@ -272,7 +284,24 @@ sub generate_failure_handler {
 		say STDERR RED "job $task_id for $hostname FAILED";
 		$alert_condvar->send("job $task_id for $hostname FAILED");
 		delete $jobs{ $task_id };
+		general_completion_procedure();
 	}
+}
+
+sub general_completion_procedure {
+	if( ( ! %jobs ) && $exit_on_empty ) {
+		say STDERR GREEN "Job queue empty";
+		exit_sequence();
+	}
+}
+
+sub exit_sequence {
+	my $stop_time = time;
+	say STDERR GREEN "Start time was $start_time";
+	say STDERR GREEN "Stop time is $stop_time";
+	say STDERR GREEN "Uptime was ".($stop_time-$start_time);
+	say STDERR GREEN "Nothing more to do, bye!";
+	exit
 }
 
 sub factset_processor {
