@@ -140,6 +140,7 @@ sub gather {
 	my $query_all_vlans = 0;
 	if( exists( $args{ query_all_vlans } ) && $args{ query_all_vlans } ) {
 		$query_all_vlans = 1;
+		$logger->info("worker $id: will query all vlans");
 	}
 
 	my $return_json;
@@ -189,12 +190,28 @@ sub gather {
 		}
 	}
 
-	my $stop_time = time;
+	my $prime_time = time;
 
 	# now the $s is primed with SNMP data
 	# let's trigger the creation of all facts
 	$logger->info("$id: calculating facts");
 	$s->calculate_facts;
+
+	my $facts_calc_time = time;	
+
+	for( @{ $s->fact_set->facts } ) {
+		$logger->debug($_->to_string);
+	}
+
+	my $facts_debug_time = time;
+
+	if($elastic) {
+		$logger->info("$id: inserting result into ".join(',',@{$elastic}));
+		my $e = SNMP::Class::Elastic->new( nodes => $elastic );
+		$e->bulk_index( $s->fact_set );	
+	}
+
+	my $stop_time = time;
 
 	$s->fact_set->push( SNMP::Class::Fact->new(
 		type	=> 'gather_meta',
@@ -202,6 +219,10 @@ sub gather {
 			start_time	=> $start_time,
 			stop_time	=> $stop_time,
 			duration	=> ( $stop_time - $start_time ), #for convenience
+			prime_t		=> ( $prime_time - $start_time ),
+			facts_calc_t	=> ( $facts_calc_time - $prime_time ),
+			facts_debug_t	=> ( $facts_debug_time - $facts_calc_time ),
+			elastic_t	=> ( $stop_time - $facts_debug_time ),	
 			target		=> $s->hostname,
 			community	=> $s->community,
 			port		=> $s->port,
@@ -215,17 +236,6 @@ sub gather {
 			worker		=> $id,
 		},
 	));
-
-	for( @{ $s->fact_set->facts } ) {
-		$logger->debug($_->to_string);
-	}
-
-	#
-	if($elastic) {
-		$logger->info("$id: inserting result into ".join(',',@{$elastic}));
-		my $e = SNMP::Class::Elastic->new( nodes => $elastic );
-		$e->bulk_index( $s->fact_set );	
-	}
 
 	if( $return_json ) {
 		return $s->fact_set->TO_JSON

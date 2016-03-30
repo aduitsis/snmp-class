@@ -266,7 +266,6 @@ sub generate_completion_handler {
 	my $hostname	= shift // die 'missing hostname';
 	my $task_id	= shift // die 'missing task id';
 	sub {
-		### p $_[1];
 		say STDERR GREEN "$hostname: gather task #$task_id completed";
 		my $fact_set = SNMP::Class::FactSet::Simple::unserialize( $_[1] ) ;
 		factset_processor( $gearman , $hostname, $fact_set ) ;
@@ -308,6 +307,15 @@ sub factset_processor {
 	my $gearman = shift // die 'missing taskset'; # in case we need to submit new jobs in the job queue
 	my $hostname = shift // die 'missing hostname';
 	my $fact_set = shift // die 'missing fact_set';
+
+	#some final stats
+	my $t0 = $fact_set->typeslot('gather_meta','stop_time');
+	$fact_set->each( sub {
+		if ( $_->type eq 'gather_meta' ) { 
+			$_->slots->{ transmission_t } = time-$t0 
+		}
+	});
+
 	my $sysname = get_sysname( $fact_set );
 	my @neighbors = get_neighbors( $fact_set );
 	my @ipv4s = grep { $_ ne '127.0.0.1' } get_ipv4s( $fact_set );
