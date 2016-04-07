@@ -30,13 +30,20 @@ my $DEBUG = 0;
 
 my $workers = 1;
 
-my @job_servers = 'localhost:4730';
-
 my @mibdirs = ();
 
 my $use_json;
 
-GetOptions( 'mib|mibs|M=s' => \@mibdirs , 'j=i' => \$workers, 'd' => \$daemonize , 'v' => \$DEBUG , 's=s' => \@job_servers, 'json' => \$use_json );
+GetOptions( 
+	'mib|mibs|M=s'	=> \@mibdirs,
+	'j=i'		=> \$workers,
+	'd'		=> \$daemonize,
+	'v'		=> \$DEBUG,	
+	's=s'		=> \my @job_servers,	
+	'json'		=> \$use_json,
+);
+
+@job_servers = ( 'localhost:4730' ) unless @job_servers;
 
 for( @mibdirs ) {
 	$logger->info('adding '.$_.' to mibdirs');
