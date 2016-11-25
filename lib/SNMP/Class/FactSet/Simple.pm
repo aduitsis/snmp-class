@@ -51,6 +51,10 @@ sub unique_id {
 	);
 }
 
+sub each {
+	$_[1]->( $_ ) for ( @{ $_[0]->fact_set } )
+}
+
 sub push { 
 	defined( my $self = shift( @_ ) ) or confess 'incorrect call';
 	for( @_ ) {
@@ -98,5 +102,13 @@ sub FROM_JSON {
 		fact_set => [ map { SNMP::Class::Fact->new( time => $_->{time} , type => $_->{type} , slots => $_->{slots} ) } @{ $data->{fact_set} } ],
 	);
 }	
+
+sub clone {
+	return __PACKAGE__->new( fact_set => [ @{ $_[0]->facts } ] )
+}
+
+sub deduplicate {
+	# TODO: implement
+}
 
 1;
