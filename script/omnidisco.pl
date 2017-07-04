@@ -62,14 +62,14 @@ else {
 	die 'no store implementations available';
 }
 
-my @redis_args = ();
-if( defined ( $redis_server ) ) {
-	if ( $redis_server !~ /:\d+$/ ) {
-		$redis_server .= ':6379';
-	}
-	push @redis_args,( server => $redis_server )
-}
-my $redis = Redis->new( @redis_args );
+#my @redis_args = ();
+#if( defined ( $redis_server ) ) {
+#	if ( $redis_server !~ /:\d+$/ ) {
+#		$redis_server .= ':6379';
+#	}
+#	push @redis_args,( server => $redis_server )
+#}
+#my $redis = Redis->new( @redis_args );
 
 if ( @job_servers ) {
 	$job_servers = [ @job_servers ]
