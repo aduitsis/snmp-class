@@ -11,6 +11,7 @@ use List::Util qw(none any);
 use SNMP::Class::Fact;
 use SNMP::Class::FactSet::Simple;
 use Data::Printer;
+use Redis;
 use Moose;
 
 with 'SNMP::Class::Role::KeyStore';
