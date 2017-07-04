@@ -10,6 +10,7 @@ use Scalar::Util;
 use List::Util qw(none any);
 use SNMP::Class::Fact;
 use Data::Printer;
+use Moose::Util qw(does_role);
 use Moose::Role;
 
 requires qw( push grep map facts item count ) ;
@@ -55,6 +56,8 @@ sub each {
 Searches $fact_set for facts of type $type having a slot $slot, and returns the values of those slots in an array.
 
 =cut
+
+
 
 sub typeslots {
 	my $self = shift // die 'incorrect call';
@@ -106,6 +109,19 @@ sub to_string {
 	my @str;
 	$self->string_each( sub { push @str,$_ }, @_ );
 	return join("\n",@str)
+}
+
+=head2 ensure($fact_set)
+
+Checks whether its agument is indeed a FactSet. Please note that
+if it walks like a duck and quacks like a duck, it's a duck. In
+other words, anything that is a blessed reference and does the
+SNMP::Class::Role::FactSet role will be considered a FactSet.
+
+=cut
+
+sub ensure {
+	blessed $_[0]  && does_role($_[0] , __PACKAGE__ )
 }
 
 1;
