@@ -73,7 +73,6 @@ sub index_name {
 }
 
 sub bulk_index {
-
 	my $self	= shift // die 'incorrect call';
 	my $fact_set	= shift // die 'missing factset';
 
@@ -95,5 +94,6 @@ sub bulk_index {
 	});
 	$bulk->flush;
 }
+
 
 1;

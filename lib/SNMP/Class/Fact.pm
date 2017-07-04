@@ -88,6 +88,17 @@ sub unique_id {
 	));
 }
 
+=head2 iso8601( $optional_format )
+
+Returns the Fact time in ISO8601 format, specifically %Y-%m-%dT%H:%M:%SZ.
+If the $optional_format is supplied, it will be used instead of the default.
+
+=cut
+
+sub iso8601 {
+	DateTime->from_epoch( epoch => $_[0]->time )->strftime( $_[1] // '%Y-%m-%dT%H:%M:%SZ' );
+}
+
 =head2 elastic_doc
 
 Returns a structure suitable to be fed a the document to be inserted into an
@@ -97,9 +108,24 @@ date, all packed into a hash reference.
 =cut
 
 sub elastic_doc {
-	my $date = DateTime->from_epoch( epoch => $_[0]->time )->strftime('%Y-%m-%dT%H:%M:%SZ');
-	return { ( %{ $_[0]->slots } ) , date => $date, }
+	return { ( %{ $_[0]->slots } ) , date => $_[0]->iso8601 }
+}
 
+=head2 logstash_doc
+
+Basically the same as elastic_doc, with an additional '@metadata'
+field containing a type and a time fields. Type contains the
+Fact type and time the Unix epoch. If logstash is fed via e.g.
+a Redis pubsub channel, serializing the return value of this
+method and using appropriate field references to 
+[@metadata][type] and [@metadata][time] within logstash, can
+be used as a way to get the correct timestamp and also 
+differentiate behaviour according to type.
+
+=cut
+
+sub logstash_doc {
+	return { ( %{ $_[0]->slots } ) , '@metadata' => { type => $_[0]->type, time => $_[0]->time } }
 }
 
 # WARNING: this is a class method
