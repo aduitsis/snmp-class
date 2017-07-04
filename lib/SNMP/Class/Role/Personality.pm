@@ -54,6 +54,7 @@ use SNMP::Class::Role::Personality::VtpVlanState;
 use SNMP::Class::Role::Personality::VmVlan;
 use SNMP::Class::Role::Personality::LaLoad;
 use SNMP::Class::Role::Personality::DskTable;
+use SNMP::Class::Role::Personality::EatonUPS;
 
 #import the utility module
 use Moose::Util qw/find_meta does_role search_class_by_role/;
